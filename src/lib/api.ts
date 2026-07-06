@@ -1,0 +1,162 @@
+import { API_BASE_URL } from "./config";
+
+export type ApiError = {
+  status: "error";
+  message: string;
+};
+
+export type MonitorStatus = {
+  mwk: number;
+  usdc: number;
+  usd_to_mwk_rate: number;
+  alerts: string[];
+  healthy: boolean;
+};
+
+export type BuyResponse =
+  | {
+      status: "success";
+      code: string;
+      amount: number;
+      currency: string;
+      charge_id: string;
+    }
+  | ApiError;
+
+export type ConvertResponse =
+  | {
+      status: "success";
+      usd_amount: number;
+      mwk_amount: number;
+      charge_id: string;
+      rate: number;
+      usd_balance?: number;
+    }
+  | ApiError;
+
+export type DepositInstructions = {
+  mode: string;
+  bank_name: string;
+  bank_beneficiary_name: string;
+  bank_address: string;
+  bank_routing_number: string;
+  bank_account_number: string;
+  payment_rails: string[];
+  currency: string;
+  instructions: string;
+};
+
+export type UserProfile = {
+  email: string;
+  usd_balance: number;
+  deposit_instructions: DepositInstructions;
+};
+
+export type SimulateDepositResponse =
+  | {
+      status: "success";
+      usd_balance: number;
+      amount: number;
+      source: string;
+      charge_id: string;
+    }
+  | ApiError;
+
+export type Transaction = {
+  id: number;
+  type: string;
+  amount: number;
+  currency: string;
+  status: string;
+  charge_id: string;
+  phone: string;
+  email: string;
+  created_at: string;
+};
+
+export class BackendRequestError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode: number
+  ) {
+    super(message);
+    this.name = "BackendRequestError";
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+
+  const data = (await response.json().catch(() => null)) as T | ApiError | null;
+
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && "message" in data && data.message
+        ? String(data.message)
+        : `Request failed (${response.status})`;
+    throw new BackendRequestError(message, response.status);
+  }
+
+  return data as T;
+}
+
+export function makeChargeId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function getMonitor() {
+  return request<MonitorStatus>("/monitor");
+}
+
+export function getTransactions() {
+  return request<{ transactions: Transaction[] }>("/api/transactions");
+}
+
+export function getUserProfile(email: string) {
+  const params = new URLSearchParams({ email });
+  return request<UserProfile>(`/api/users/me?${params}`);
+}
+
+export function simulateDeposit(input: {
+  email: string;
+  amount: number;
+  source?: string;
+}) {
+  return request<SimulateDepositResponse>("/api/mock/simulate-deposit", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function buyGiftCard(input: {
+  phone: string;
+  amount: number;
+  charge_id: string;
+  email: string;
+  name: string;
+}) {
+  return request<BuyResponse>("/api/buy", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function convertToMwk(input: {
+  usd_amount: number;
+  phone: string;
+  charge_id: string;
+  email: string;
+  tx_hash?: string;
+}) {
+  return request<ConvertResponse>("/api/convert", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
