@@ -12,40 +12,46 @@ export const REDDIT_ATTESTATIONS: RedditAttestation[] = [
     topic: "forex",
   },
   {
-    url: "https://www.reddit.com/r/Malawi/comments/1ukfeg2/experience_with_nbm_on_forex_application/",
-    title: "Experience with NBM on forex application",
-    topic: "banking",
-  },
-  {
     url: "https://www.reddit.com/r/Malawi/comments/1rq0qf3/bringing_dollars_into_malawi/",
     title: "Bringing Dollars into Malawi",
     topic: "remittance",
   },
   {
-    url: "https://www.reddit.com/r/Malawi/s/wLujzBR3Gq",
-    title: "r/Malawi discussion on forex access",
-    topic: "forex",
+    url: "https://www.reddit.com/r/Malawi/comments/1ukfeg2/experience_with_nbm_on_forex_application/",
+    title: "Experience with NBM on forex application",
+    topic: "banking",
   },
-  {
-    url: "https://www.reddit.com/r/Malawi/s/GgC0my1CnW",
-    title: "r/Malawi discussion on dollar shortage",
-    topic: "forex",
-  },
-  {
-    url: "https://www.reddit.com/r/Malawi/s/086qUJu245",
-    title: "r/Malawi discussion on paying for global services",
-    topic: "payments",
-  },
-  {
-    url: "https://www.reddit.com/r/Malawi/s/VQ2l6FPVC1",
-    title: "r/Malawi discussion on international payments",
-    topic: "payments",
-  },
-  {
-    url: "https://www.reddit.com/r/Malawi/s/aNLJnXgImc",
-    title: "r/Malawi discussion on foreign currency",
-    topic: "forex",
-  },
+ 
+  // {
+  //   url: "https://www.reddit.com/r/Malawi/s/wLujzBR3Gq",
+  //   title: "r/Malawi discussion on forex access",
+  //   topic: "forex",
+  // },
+  // {
+  //   url: "https://www.reddit.com/r/Malawi/s/GgC0my1CnW",
+  //   title: "r/Malawi discussion on dollar shortage",
+  //   topic: "forex",
+  // },
+  // {
+  //   url: "https://www.reddit.com/r/Malawi/s/086qUJu245",
+  //   title: "r/Malawi discussion on paying for global services",
+  //   topic: "payments",
+  // },
+  // {
+  //   url: "https://www.reddit.com/r/Malawi/s/VQ2l6FPVC1",
+  //   title: "r/Malawi discussion on international payments",
+  //   topic: "payments",
+  // },
+  // {
+  //   url: "https://www.reddit.com/r/Malawi/s/aNLJnXgImc",
+  //   title: "r/Malawi discussion on foreign currency",
+  //   topic: "forex",
+  // },
+  // {
+  //   url: "https://www.reddit.com/r/Malawi/s/4omgCIiKBG",
+  //   title: "r/Malawi discussion on foreign currency",
+  //   topic: "payments",
+  // }
 ];
 
 export const PROBLEM_POINTS = [
