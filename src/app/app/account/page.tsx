@@ -14,8 +14,6 @@ export default function AccountPage() {
   const [rate, setRate] = useState(1700);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [monitorHealthy, setMonitorHealthy] = useState<boolean | null>(null);
-  const [mwkReserve, setMwkReserve] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     if (!email) return;
@@ -29,8 +27,6 @@ export default function AccountPage() {
       setUsdBalance(profile.usd_balance);
       if (monitor) {
         setRate(resolveUsdToMwkRate(monitor.usd_to_mwk_rate));
-        setMonitorHealthy(monitor.healthy);
-        setMwkReserve(monitor.mwk);
       }
     } catch {
       setError("Could not load account.");
@@ -78,28 +74,23 @@ export default function AccountPage() {
           </>
         )}
 
-        <Link
-          href="/app/withdraw"
-          className="mt-6 flex h-12 items-center justify-center gap-2 rounded-xl bg-white text-sm font-bold text-brand-green-dark"
-        >
-          📱 Withdraw to MWK
-        </Link>
-      </div>
-
-      {mwkReserve !== null && (
-        <div className="mt-4 rounded-2xl bg-surface p-4 shadow-card">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Withdrawal rate</p>
-          <p className="mt-2 text-sm">1 USD ≈ {rate.toLocaleString()} MWK</p>
-          <p className="text-sm">MWK reserve: MK {Math.round(mwkReserve).toLocaleString()}</p>
-          <p
-            className={`mt-2 text-sm font-semibold ${
-              monitorHealthy ? "text-brand-green" : "text-amber-500"
-            }`}
+        <div className="mt-6 grid grid-cols-2 gap-2">
+          <Link
+            href="/app/withdraw"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-3 py-3 text-center text-xs font-bold text-brand-green-dark"
           >
-            {monitorHealthy ? "Reserves healthy" : "Check reserves"}
-          </p>
+            <span className="text-xl">↓</span>
+            Withdraw to MWK
+          </Link>
+          <Link
+            href="/app/add-usd"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-3 py-3 text-center text-xs font-bold text-brand-green-dark"
+          >
+            <span className="text-xl">+</span>
+            Add USD
+          </Link>
         </div>
-      )}
+      </div>
 
       {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
 
@@ -110,24 +101,6 @@ export default function AccountPage() {
       >
         ↻ Refresh balance
       </button>
-
-      <p className="mt-8 text-xs font-bold uppercase tracking-wider text-muted">Quick actions</p>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link
-          href="/app/withdraw"
-          className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-4 text-center text-xs font-semibold shadow-card"
-        >
-          <span className="text-2xl text-brand-green">↓</span>
-          Withdraw to MWK
-        </Link>
-        <Link
-          href="/app/add-usd"
-          className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-4 text-center text-xs font-semibold shadow-card"
-        >
-          <span className="text-2xl text-brand-green">+</span>
-          Add USD
-        </Link>
-      </div>
 
       <p className="mt-8 text-xs font-bold uppercase tracking-wider text-muted">Settings</p>
       <div className="mt-3 overflow-hidden rounded-2xl bg-surface shadow-card">
