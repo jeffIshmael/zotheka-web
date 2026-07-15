@@ -9,6 +9,7 @@ export function WaitlistModal() {
   const [position, setPosition] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [whatsappVal, setWhatsappVal] = useState("");
   const [usecaseType, setUsecaseType] = useState("");
 
   useEffect(() => {
@@ -32,8 +33,22 @@ export function WaitlistModal() {
       setPosition(null);
       setError(null);
       setPhoneError(null);
+      setWhatsappVal("");
       setUsecaseType("");
     }, 300);
+  };
+
+  const validatePhone = (val: string) => {
+    if (!val.trim()) return null; // Optional field
+    const clean = val.replace(/\D/g, "");
+    if (clean.length < 8 || clean.length > 10) {
+      return "Please enter a valid Malawian phone number (e.g., 999 123 456).";
+    }
+    return null;
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneError(validatePhone(whatsappVal));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -46,15 +61,15 @@ export function WaitlistModal() {
     
     // Optional phone validation
     let finalWhatsapp = "";
-    const rawWhatsapp = formData.get("whatsapp") as string;
-    if (rawWhatsapp.trim()) {
-      const cleanWhatsapp = rawWhatsapp.replace(/\D/g, "");
-      if (cleanWhatsapp.length < 6 || cleanWhatsapp.length > 15) {
-        setPhoneError("Please enter a valid phone number.");
+    if (whatsappVal.trim()) {
+      const err = validatePhone(whatsappVal);
+      if (err) {
+        setPhoneError(err);
         setLoading(false);
         return;
       }
-      finalWhatsapp = `+265 ${rawWhatsapp}`.trim();
+      const cleanWhatsapp = whatsappVal.replace(/\D/g, "");
+      finalWhatsapp = `+265 ${cleanWhatsapp}`.trim();
     }
     
     let usecase = formData.get("usecase");
@@ -212,8 +227,20 @@ export function WaitlistModal() {
                     id="whatsapp"
                     name="whatsapp"
                     type="tel"
+                    value={whatsappVal}
+                    onChange={(e) => {
+                      // Only allow numbers and spaces
+                      const val = e.target.value.replace(/[^\d\s]/g, "");
+                      setWhatsappVal(val);
+                      if (phoneError) setPhoneError(null);
+                    }}
+                    onBlur={handlePhoneBlur}
                     placeholder="999 123 456"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green transition"
+                    className={`w-full rounded-xl border bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-1 transition ${
+                      phoneError 
+                        ? "border-red-500/50 focus:border-red-500 focus:ring-red-500" 
+                        : "border-white/10 focus:border-brand-green focus:ring-brand-green"
+                    }`}
                   />
                 </div>
                 {phoneError && (
@@ -234,7 +261,7 @@ export function WaitlistModal() {
                   onChange={(e) => setUsecaseType(e.target.value)}
                 >
                   <option value="" disabled className="text-black">Select an option</option>
-                  <option value="Pay for AI tools" className="text-black">🌍 Pay for netflix, spotify and others </option>
+                  <option value="Pay for netflix, spotify and others" className="text-black">🌍 Pay for netflix, spotify and others </option>
                   <option value="Receive freelance payments" className="text-black">💼 Receive freelance payments</option>
                   <option value="Save MWK in USD" className="text-black">💵 Save your MWK in USD</option>
                   <option value="Pay online with USD" className="text-black">💳 Pay online with USD</option>

@@ -11,22 +11,6 @@ This repository is a **standalone Next.js app** with:
 It talks to the same **Flask backend** as the Expo mobile app.
 ---
 
-## Do you need to move this folder?
-
-**No.** You do not have to relocate files inside the monorepo for the product to work.
-
-You only choose how to **publish** it on GitHub:
-
-| Approach | What you do |
-|----------|-------------|
-| **Recommended: new repo, this folder as root** | Copy or move the contents of `zotheka-web/` into a new repository (e.g. `zotheka-web` on GitHub). Push that repo. Import it in Vercel with no root directory override. |
-| **Monorepo subdirectory** | Keep `zotheka-web/` inside the main Zotheka repo. In Vercel, set **Root Directory** to `zotheka-web`. |
-| **Git submodule** | Point a separate repo at this path if you want versioned releases without duplicating code. |
-
-The folder is already self-contained: its own `package.json`, `.env`, `vercel.json`, and assets. Nothing else from the parent repo is required at build time except the **remote Flask API**.
-
----
-
 ## The problem
 
 Malawians are online, but **global payments are not built for them**.
@@ -124,10 +108,6 @@ Users see **USD** in the app. They never manage private keys or buy crypto manua
 │  Postgres ledger · PayChangu · Cryptorefills · Bridge · Privy · CDP    │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
-
-### Why `/backend` proxy?
-
-Browsers block cross-origin calls from `localhost:3000` (or your Vercel domain) to the Flask API unless CORS is configured. This app proxies API requests through Next.js so the browser only talks to **same-origin** `/backend/*`. The server forwards to `NEXT_PUBLIC_API_URL`.
 
 ---
 
