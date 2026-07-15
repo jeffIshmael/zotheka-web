@@ -3,6 +3,7 @@ import { PROBLEM_POINTS, TWO_PILLARS } from "@/lib/landing-content";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { RedditAttestations } from "@/components/landing/RedditAttestations";
+import { WaitlistModal } from "@/components/landing/WaitlistModal";
 
 export default function LandingPage() {
   return (
@@ -105,14 +106,12 @@ export default function LandingPage() {
 
           {/* CTAs */}
           <div className="mt-10 flex flex-wrap gap-3">
-            <Link
-              href="/app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-brand-green px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-green/30 transition hover:bg-brand-green-dark"
+            <a
+              href="#waitlist"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-brand-green px-8 py-4 text-sm font-bold text-white shadow-xl shadow-brand-green/20 transition-all hover:scale-105 hover:bg-brand-green-dark hover:shadow-2xl hover:shadow-brand-green/40 active:scale-95"
             >
-              Try the web app
-            </Link>
+              Join Waitlist
+            </a>
             <a
               href="#how-it-works"
               className="rounded-full border border-white/12 px-7 py-3.5 text-sm font-bold text-white/70 transition hover:border-white/25 hover:text-white"
@@ -282,14 +281,12 @@ export default function LandingPage() {
                   simulate a Fiverr USD payout, or withdraw to Kwacha.
                 </p>
               </div>
-              <Link
-                href="/app"
-                target="_blank"
-                rel="noopener noreferrer"
+              <a
+                href="#waitlist"
                 className="inline-flex shrink-0 items-center justify-center rounded-full bg-white px-8 py-4 text-sm font-bold text-brand-green-dark shadow-lg transition hover:bg-brand-green-light"
               >
-                Launch web app →
-              </Link>
+                Join Waitlist →
+              </a>
             </div>
             {/* flag stripe footer accent */}
             <div className="flex h-1">
@@ -302,6 +299,7 @@ export default function LandingPage() {
       </section>
 
       <LandingFooter />
+      <WaitlistModal />
     </div>
   );
 }

@@ -4,7 +4,7 @@ Public-facing web experience for **Zotheka**: a Malawi-focused payments product 
 
 This repository is a **standalone Next.js app** with:
 
-- A **marketing landing page** (`/`) for grant reviewers and the public
+- A **marketing landing page** (`/`) for grant reviewers and the public, including a **waitlist** for early access
 - An **interactive web demo** (`/app`) that mirrors the mobile app
 - An **About page** (`/about`) explaining the product in depth
 
@@ -241,7 +241,8 @@ sequenceDiagram
 
 | Path | Purpose |
 |------|---------|
-| `/` | Landing page: problem, social proof (r/Malawi), how it works, CTA |
+| `/` | Landing page: problem, social proof (r/Malawi), how it works, waitlist, CTA |
+| `/api/waitlist` | Backend proxy to Google Sheets for waitlist signups |
 | `/about` | Full product story for reviewers |
 | `/app` | Sign-in gate → home (gift card purchase) |
 | `/app/sign-in` | Privy: email OTP + Google |

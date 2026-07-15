@@ -20,6 +20,9 @@ export const metadata: Metadata = {
       "Mobile money to Netflix, Spotify & more. USD earnings to MWK withdrawals.",
     type: "website",
   },
+  icons: {
+    icon: "/images/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
