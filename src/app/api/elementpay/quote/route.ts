@@ -76,13 +76,17 @@ export async function POST(req: Request) {
     });
 
     const acceptData = await acceptRes.json();
+    console.log("Accept Response:", JSON.stringify(acceptData));
     
     if (acceptData.status === "error") {
       console.error("Accept Error", acceptData);
       return NextResponse.json({ error: acceptData.message, details: acceptData.data }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, order: acceptData.data, rate: rate });
+    const orderPayload = acceptData.data || {};
+    orderPayload.order_id = orderPayload.order_id || orderPayload.id || quoteId;
+
+    return NextResponse.json({ success: true, order: orderPayload, rate: rate });
   } catch (error: any) {
     console.error("ElementPay Exception", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

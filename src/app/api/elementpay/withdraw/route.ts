@@ -82,16 +82,21 @@ export async function POST(request: Request) {
     });
 
     const acceptData = await acceptRes.json();
+    console.log("Accept Response (Withdraw):", JSON.stringify(acceptData));
+    
     if (!acceptRes.ok) {
       console.error("Accept Error", acceptData);
       return NextResponse.json({ error: acceptData.message || "Failed to accept quote" }, { status: 400 });
     }
 
+    const orderPayload = acceptData.data || {};
+    orderPayload.order_id = orderPayload.order_id || orderPayload.id || quoteId;
+
     // 3. Return success with the order details
     // The UI can now display that the withdrawal is processing.
     return NextResponse.json({
       status: "success",
-      order: acceptData.data,
+      order: orderPayload,
       fees_deducted: platformFee
     });
 
