@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       console.log(`✅ [ElementPay] Order ${payload.order_id} settled — hash ${payload.settlement_transaction_hash}`);
       // Future logic: update user balance or notify user
     } else if (event === "order.failed") {
-      console.log(`❌ [ElementPay] Order ${payload.order_id} failed. Payload:`, JSON.stringify(payload));
+      console.log(`❌ [ElementPay] Order ${payload.order_id} failed — reason: ${payload.reason || payload.failure_reason || "UNKNOWN"}`);
     } else if (event === "order.processing") {
       console.log(`⏳ [ElementPay] Order ${payload.order_id} is processing on the payment rail.`);
     } else {
