@@ -117,10 +117,8 @@ export default function WithdrawPage() {
         ← Account
       </Link>
       
-      <h1 className="mt-4 text-2xl font-extrabold">Withdraw to MWK</h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted">
-        Cash out your USD balance to mobile money (Element Pay OffRamp).
-      </p>
+      <h1 className="mt-6 text-2xl font-extrabold">Withdraw USDC</h1>
+      <p className="mt-2 text-sm text-muted">Send funds to your local Mobile Money account.</p>
 
       {loading ? (
         <div className="mt-12 flex justify-center">

@@ -101,14 +101,6 @@ export default function OnrampPage() {
 
   return (
     <div className="px-4 pt-4 pb-8">
-
-      <div className="mt-4 flex gap-2 rounded-xl bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
-        <span>🧪</span>
-        <p>
-          Element Pay sandbox demo: Enter test phone number and amount. We will create a quote and immediately accept it to simulate an onramp to USDC.
-        </p>
-      </div>
-
       <h1 className="mt-6 text-2xl font-extrabold">Add MWK (OnRamp)</h1>
       <p className="mt-2 text-sm text-muted">Deposit MWK via Mobile Money to receive USDC.</p>
 
