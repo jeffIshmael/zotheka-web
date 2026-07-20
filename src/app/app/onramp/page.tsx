@@ -160,7 +160,7 @@ export default function OnrampPage() {
               </div>
 
               <div className="mb-4">
-                <label className="mb-1 block text-sm font-semibold text-muted">Phone Number (E.164)</label>
+                <label className="mb-1 block text-sm font-semibold text-muted">Phone Number</label>
                 <div className="flex h-[52px] w-full overflow-hidden rounded-xl border border-border bg-transparent focus-within:border-brand-green">
                   <div className="flex items-center justify-center border-r border-border bg-muted/10 px-4 text-sm font-bold text-muted">
                     +265

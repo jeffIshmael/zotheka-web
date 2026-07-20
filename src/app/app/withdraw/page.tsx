@@ -170,7 +170,7 @@ export default function WithdrawPage() {
                 })}
               </div>
 
-              <p className="mt-6 text-sm font-semibold text-muted">Phone Number (E.164)</p>
+              <p className="mt-6 text-sm font-semibold text-muted">Phone Number</p>
               <div className="mt-2 flex h-[52px] w-full overflow-hidden rounded-xl border border-border bg-surface focus-within:ring-2 ring-brand-green">
                 <div className="flex items-center justify-center border-r border-border bg-muted/10 px-4 text-lg font-bold text-muted">
                   +265
