@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const ELEMENTPAY_API = "https://sandbox.elementpay.net/api/v1";
-const API_KEY = process.env.ELEMENTPAY_SANDBOX_API;
+const ELEMENTPAY_API = "https://api.elementpay.net/api/v1";
+const API_KEY = process.env.ELEMENTPAY_LIVE_API_KEY;
 
 export async function POST(request: Request) {
   try {
