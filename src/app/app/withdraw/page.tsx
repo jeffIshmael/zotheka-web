@@ -133,13 +133,9 @@ export default function WithdrawPage() {
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-green-light text-2xl text-brand-green">
                 ✓
               </div>
-              <h3 className="mt-4 text-xl font-extrabold">Withdrawal Initiated!</h3>
-              <p className="mt-2 text-sm text-muted">
-                Order ID: <span className="font-mono text-xs">{success.order?.order_id}</span>
-              </p>
+              <h3 className="mt-4 text-xl font-extrabold">Withdrawal Started</h3>
               <p className="mt-4 text-sm text-muted">
-                Your payout is processing. We have deducted ${Number(amount).toFixed(2)} from your balance (including a ${success.fees_deducted?.toFixed(2)} fee).<br/><br/>
-                You will receive an SMS from your Mobile Money provider shortly once the funds settle.
+                Your withdrawal is being processed. It may take a few minutes for the funds to arrive in your mobile money account.
               </p>
               <button
                 type="button"

@@ -124,9 +124,6 @@ export default function OnrampPage() {
                 ✓
               </div>
               <h3 className="mt-4 text-xl font-extrabold">Prompt sent to your phone!</h3>
-              <p className="mt-2 text-sm text-muted">
-                Order ID: <span className="font-mono text-xs">{success.order_id}</span>
-              </p>
               <p className="mt-4 text-sm text-muted">
                 Please check your mobile device and enter your Mobile Money PIN to approve the deposit. Wait for the webhook to settle the transaction.
               </p>
