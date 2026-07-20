@@ -123,14 +123,19 @@ export function BuyGiftCardModal({ visible, product, rate, onClose, onBuy, payin
           </div>
 
           <p className="mb-2 text-sm font-semibold text-muted">Phone number</p>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Enter phone number"
-            disabled={paying}
-            className="mb-4 h-12 w-full rounded-xl border border-border bg-background px-4 text-base font-semibold outline-none ring-brand-green focus:ring-2"
-          />
+          <div className="mb-4 flex h-12 w-full overflow-hidden rounded-xl border border-border bg-background focus-within:ring-2 ring-brand-green">
+            <div className="flex items-center justify-center border-r border-border bg-muted/10 px-4 text-base font-bold text-muted">
+              +265
+            </div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="991234567"
+              disabled={paying}
+              className="flex-1 bg-transparent px-3 text-base font-semibold outline-none"
+            />
+          </div>
 
           <div className="flex items-center justify-between border-t border-border pt-4">
             <span className="font-semibold text-muted">Total</span>
@@ -140,7 +145,7 @@ export function BuyGiftCardModal({ visible, product, rate, onClose, onBuy, payin
           <button
             type="button"
             disabled={!canPay || paying}
-            onClick={() => void onBuy({ quantity, network, phone: phone.trim() })}
+            onClick={() => void onBuy({ quantity, network, phone: `+265${phone.trim().replace(/^(\+?265|0)/, "")}` })}
             className={`mt-4 h-[52px] w-full rounded-xl text-base font-bold ${
               canPay && !paying
                 ? "bg-brand-green text-white"

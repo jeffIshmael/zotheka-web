@@ -77,14 +77,14 @@ export default function AccountPage() {
         <div className="mt-6 grid grid-cols-2 gap-2">
           <Link
             href="/app/withdraw"
-            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-3 py-3 text-center text-xs font-bold text-brand-green-dark"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-2 py-3 text-center text-xs font-bold text-brand-green-dark"
           >
             <span className="text-xl">↓</span>
-            Withdraw to MWK
+            Withdraw
           </Link>
           <Link
             href="/app/add-usd"
-            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-3 py-3 text-center text-xs font-bold text-brand-green-dark"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-2 py-3 text-center text-xs font-bold text-brand-green-dark"
           >
             <span className="text-xl">+</span>
             Add USD

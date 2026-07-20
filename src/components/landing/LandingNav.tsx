@@ -16,13 +16,13 @@ export function LandingNav() {
           <Link href="/about" className="transition hover:text-white">About</Link>
         </nav>
 
-        <a
-          href="#waitlist"
+        <Link
+          href="/app"
           className="flex items-center gap-1.5 rounded-full bg-brand-green px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-brand-green/40 transition hover:bg-brand-green-dark"
         >
           Launch MVP web app
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
-        </a>
+        </Link>
       </div>
     </header>
   );

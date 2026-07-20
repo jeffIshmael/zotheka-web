@@ -1,173 +1,250 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { BackendRequestError, convertToMwk, getMonitor, getUserProfile, makeChargeId } from "@/lib/api";
+import { getMonitor, getUserProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { DEMO_BYPASS_ONCHAIN, resolveUsdToMwkRate } from "@/lib/config";
+import { resolveUsdToMwkRate } from "@/lib/config";
 
-const NETWORKS = [
-  { id: "airtel" as const, label: "Airtel Money", logo: "/images/Airtel-logo.jpg", height: 32 },
-  { id: "mtn" as const, label: "TNM Mpamba", logo: "/images/mtn-yellow-logo.png", height: 36 },
-];
-
-type NetworkId = (typeof NETWORKS)[number]["id"];
+type Provider = {
+  id: string;
+  name: string;
+  code: string;
+  min_amount: number;
+  max_amount: number;
+  currency: string;
+};
 
 export default function WithdrawPage() {
   const router = useRouter();
   const { email } = useAuth();
+  
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [phone, setPhone] = useState("");
-  const [network, setNetwork] = useState<NetworkId>("airtel");
-  const [submitting, setSubmitting] = useState(false);
+  
   const [availableBalance, setAvailableBalance] = useState(0);
   const [rate, setRate] = useState(1700);
+  
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<any>(null);
 
-  const refresh = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!email) return;
     try {
-      const [profile, monitor] = await Promise.all([
-        getUserProfile(email),
+      const [profileRes, monitorRes, infoRes] = await Promise.all([
+        getUserProfile(email).catch(() => null),
         getMonitor().catch(() => null),
+        fetch("/api/elementpay/info?order_type=OffRamp").then((r) => r.json()),
       ]);
-      setAvailableBalance(profile.usd_balance);
-      if (monitor) setRate(resolveUsdToMwkRate(monitor.usd_to_mwk_rate));
-    } catch {
-      /* ignore */
+
+      if (profileRes) setAvailableBalance(profileRes.usd_balance);
+      
+      if (monitorRes) {
+        setRate(resolveUsdToMwkRate(monitorRes.usd_to_mwk_rate));
+      }
+
+      if (infoRes?.rate?.exchange_rate) {
+        setRate(infoRes.rate.exchange_rate);
+      } else if (infoRes?.rate?.sell) {
+        setRate(infoRes.rate.sell);
+      }
+
+      if (infoRes?.providers && infoRes.providers.length > 0) {
+        setProviders(infoRes.providers);
+        setSelectedProviderId(infoRes.providers[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to load offramp info", err);
+    } finally {
+      setLoading(false);
     }
   }, [email]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    fetchData();
+  }, [fetchData]);
 
   const amountNum = Number(amount);
   const exceedsUsdBalance = amountNum > availableBalance;
-  const mwkEstimate = amount && !exceedsUsdBalance ? Math.round(amountNum * rate) : 0;
+  
+  // Fee Calculation: 2%
+  const platformFee = amountNum > 0 ? amountNum * 0.02 : 0;
+  const netAmount = amountNum - platformFee;
+  const mwkEstimate = netAmount > 0 && !exceedsUsdBalance ? Math.round(netAmount * rate) : 0;
 
   const handleWithdraw = async () => {
-    if (!email || !amount || !phone || exceedsUsdBalance || submitting) return;
+    if (!email || !amount || !phone || exceedsUsdBalance || submitting || !selectedProviderId) return;
 
     setSubmitting(true);
+    setError(null);
+
     try {
-      const result = await convertToMwk({
-        usd_amount: amountNum,
-        phone: phone.trim(),
-        charge_id: makeChargeId("withdraw"),
-        email,
+      const res = await fetch("/api/elementpay/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amountNum,
+          phone: `+265${phone.trim().replace(/^(\+?265|0)/, "")}`,
+          providerId: selectedProviderId,
+          email,
+        }),
       });
 
-      if (result.status === "success") {
-        alert(
-          `$${amountNum.toFixed(2)} cashed out. Payout of MK ${result.mwk_amount.toLocaleString()} to your ${network === "airtel" ? "Airtel" : "TNM"} number is processing.`
-        );
-        router.push("/app/account");
-        return;
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to process withdrawal");
       }
-      alert(result.message);
-    } catch (error) {
-      const message =
-        error instanceof BackendRequestError
-          ? error.message
-          : "Could not complete withdrawal. Try again.";
-      alert(message);
+
+      setSuccess(data);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const activeProvider = providers.find(p => p.id === selectedProviderId);
+
   return (
-    <div className="px-4 pt-4">
+    <div className="px-4 pt-4 pb-8">
       <Link href="/app/account" className="text-sm font-semibold text-brand-green">
         ← Account
       </Link>
+      
       <h1 className="mt-4 text-2xl font-extrabold">Withdraw to MWK</h1>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        {DEMO_BYPASS_ONCHAIN
-          ? "Cash out your USD balance to mobile money"
-          : "Cash out USD by sending USDC to the treasury, then receive MWK on mobile money"}
-        {` · 1 USD ≈ ${rate.toLocaleString()} MWK`}.
+        Cash out your USD balance to mobile money (Element Pay OffRamp).
       </p>
 
-      <p className="mt-6 text-sm font-semibold text-muted">Network</p>
-      <div className="mt-2 flex gap-2">
-        {NETWORKS.map((item) => {
-          const selected = network === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setNetwork(item.id)}
-              className={`flex h-14 flex-1 items-center justify-center rounded-xl border px-3 ${
-                selected ? "border-brand-green bg-brand-green-light" : "border-border bg-surface"
-              }`}
-            >
-              <Image
-                src={item.logo}
-                alt={item.label}
-                width={120}
-                height={item.height}
-                className="max-h-9 w-auto object-contain"
-              />
-            </button>
-          );
-        })}
-      </div>
+      {loading ? (
+        <div className="mt-12 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-green border-t-transparent" />
+        </div>
+      ) : (
+        <div className="mt-6">
+          {success ? (
+            <div className="rounded-2xl bg-surface p-6 shadow-card text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-green-light text-2xl text-brand-green">
+                ✓
+              </div>
+              <h3 className="mt-4 text-xl font-extrabold">Withdrawal Initiated!</h3>
+              <p className="mt-2 text-sm text-muted">
+                Order ID: <span className="font-mono text-xs">{success.order?.order_id}</span>
+              </p>
+              <p className="mt-4 text-sm text-muted">
+                Your payout is processing. We have deducted ${Number(amount).toFixed(2)} from your balance (including a ${success.fees_deducted?.toFixed(2)} fee).<br/><br/>
+                You will receive an SMS from your Mobile Money provider shortly once the funds settle.
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/app/account")}
+                className="mt-6 w-full rounded-xl bg-brand-green px-8 py-3 text-sm font-bold text-white"
+              >
+                Return to Account
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="mt-6 text-sm font-semibold text-muted">Network</p>
+              <div className="mt-2 flex gap-2">
+                {providers.map((item) => {
+                  const selected = selectedProviderId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedProviderId(item.id)}
+                      className={`flex h-14 flex-1 items-center justify-center rounded-xl border px-3 text-sm font-bold ${
+                        selected ? "border-brand-green bg-brand-green-light text-brand-green-dark" : "border-border bg-surface text-muted hover:text-text"
+                      }`}
+                    >
+                      {item.name}
+                    </button>
+                  );
+                })}
+              </div>
 
-      <p className="mt-6 text-sm font-semibold text-muted">Phone number</p>
-      <input
-        type="tel"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        placeholder="0991234567"
-        disabled={submitting}
-        className="mt-2 h-[52px] w-full rounded-xl border border-border bg-surface px-4 text-lg font-semibold outline-none ring-brand-green focus:ring-2"
-      />
+              <p className="mt-6 text-sm font-semibold text-muted">Phone Number (E.164)</p>
+              <div className="mt-2 flex h-[52px] w-full overflow-hidden rounded-xl border border-border bg-surface focus-within:ring-2 ring-brand-green">
+                <div className="flex items-center justify-center border-r border-border bg-muted/10 px-4 text-lg font-bold text-muted">
+                  +265
+                </div>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="991234567"
+                  disabled={submitting}
+                  className="flex-1 bg-transparent px-4 text-lg font-semibold outline-none disabled:opacity-60"
+                />
+              </div>
 
-      <p className="mt-6 text-sm font-semibold text-muted">Amount (USD)</p>
-      <div
-        className={`mt-2 flex items-center rounded-xl border bg-surface ${
-          exceedsUsdBalance ? "border-red-500" : "border-border"
-        }`}
-      >
-        <span className="pl-4 text-lg font-semibold text-muted">$</span>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          disabled={submitting}
-          className="h-[52px] flex-1 bg-transparent px-2 text-lg font-semibold outline-none"
-        />
-      </div>
-      <p className="mt-2 text-sm text-muted">
-        Available: <strong>${availableBalance.toFixed(2)}</strong>
-        {" · "}
-        <strong>({Math.round(availableBalance * rate).toLocaleString()} MKW)</strong>
-      </p>
-      {exceedsUsdBalance && (
-        <p className="mt-1 text-sm text-red-500">Amount exceeds your USD balance.</p>
-      )}
+              <p className="mt-6 text-sm font-semibold text-muted">Amount (USDC)</p>
+              <div
+                className={`mt-2 flex items-center rounded-xl border bg-surface ${
+                  exceedsUsdBalance ? "border-red-500" : "border-border"
+                }`}
+              >
+                <span className="pl-4 text-lg font-semibold text-muted">$</span>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  disabled={submitting}
+                  className="h-[52px] flex-1 bg-transparent px-2 text-lg font-semibold outline-none disabled:opacity-60"
+                />
+              </div>
+              <div className="mt-2 flex justify-between text-sm text-muted">
+                <span>Available: <strong>${availableBalance.toFixed(2)}</strong></span>
+                <span>{`1 USD ≈ ${rate.toLocaleString()} MWK`}</span>
+              </div>
+              
+              {exceedsUsdBalance && (
+                <p className="mt-1 text-sm text-red-500">Amount exceeds your USD balance.</p>
+              )}
 
-      {mwkEstimate > 0 && !exceedsUsdBalance && (
-        <div className="mt-4 rounded-xl bg-brand-green-light p-4">
-          <p className="text-xs text-brand-green-dark">You&apos;ll receive approx.</p>
-          <p className="text-2xl font-extrabold text-brand-green-dark">
-            MK {mwkEstimate.toLocaleString()}
-          </p>
+              {amountNum > 0 && !exceedsUsdBalance && (
+                <div className="mt-6 space-y-3 rounded-xl bg-[#111] p-4 text-sm shadow-inner">
+                  <div className="flex justify-between text-muted">
+                    <span>Withdrawal Amount</span>
+                    <span>${amountNum.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-brand-green/80">
+                    <span>Platform Fee (2%)</span>
+                    <span>- ${platformFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-white border-t border-white/10 pt-3">
+                    <span>Net Amount</span>
+                    <span>${netAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="mt-2 flex justify-between font-bold text-brand-green text-lg">
+                    <span>You Receive (Est.)</span>
+                    <span>~ MK {mwkEstimate.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+
+              {error && <p className="mt-6 text-sm text-red-500">{error}</p>}
+
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                disabled={!amount || !phone || !email || exceedsUsdBalance || submitting || !selectedProviderId}
+                className="mt-8 h-[52px] w-full rounded-xl bg-brand-green text-sm font-bold text-white disabled:bg-border disabled:text-muted transition"
+              >
+                {submitting ? "Processing payout…" : "Confirm withdrawal"}
+              </button>
+            </>
+          )}
         </div>
       )}
-
-      <button
-        type="button"
-        onClick={handleWithdraw}
-        disabled={!amount || !phone || !email || exceedsUsdBalance || submitting}
-        className="mt-8 h-[52px] w-full rounded-xl bg-brand-green text-sm font-bold text-white disabled:bg-border disabled:text-muted"
-      >
-        {submitting ? "Processing payout…" : "Confirm withdrawal"}
-      </button>
     </div>
   );
 }

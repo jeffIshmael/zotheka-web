@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 const NAV_ITEMS = [
   { href: "/app", label: "Home", icon: HomeIcon },
   { href: "/app/purchases", label: "My purchases", icon: BagIcon },
+    { href: "/app/onramp", label: "Get USD", icon: PlusIcon },
   { href: "/app/history", label: "History", icon: ClockIcon },
   { href: "/app/account", label: "Account", icon: UserIcon },
 ];
@@ -119,6 +120,16 @@ function UserIcon({ active }: { active: boolean }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="8" r="4" />
       <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+    </svg>
+  );
+}
+
+function PlusIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 12h8" />
+      <path d="M12 8v8" />
     </svg>
   );
 }
