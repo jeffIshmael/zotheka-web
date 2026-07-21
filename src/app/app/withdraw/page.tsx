@@ -241,9 +241,8 @@ export default function WithdrawPage() {
           {/* STATE 1: PROMPT SENT */}
           {orderState === "prompt_sent" && (
             <div className="py-4 text-center">
-              <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-green/10 text-3xl">
-                <span className="animate-bounce">📲</span>
-                <div className="absolute inset-0 rounded-full border-2 border-brand-green border-t-transparent animate-spin" />
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-green/10 text-3xl">
+                <span className="animate-bounce [animation-duration:2.2s]">📲</span>
               </div>
 
               <h3 className="mt-6 text-xl font-extrabold">Payout Instructions Submitted!</h3>
