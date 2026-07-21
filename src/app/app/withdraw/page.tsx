@@ -165,7 +165,11 @@ export default function WithdrawPage() {
               </div>
 
               <p className="mt-6 text-sm font-semibold text-muted">Phone Number</p>
-              <div className="mt-2 flex h-[52px] w-full overflow-hidden rounded-xl border border-border bg-surface focus-within:ring-2 ring-brand-green">
+              <div className={`mt-2 flex h-[52px] w-full overflow-hidden rounded-xl border bg-surface focus-within:ring-2 ring-brand-green ${
+                phone !== "" && (!/^\\d+$/.test(phone.trim().replace(/^(\\+?265|0)/, "")) || phone.trim().replace(/^(\\+?265|0)/, "").length !== 9)
+                  ? "border-red-500"
+                  : "border-border"
+              }`}>
                 <div className="flex items-center justify-center border-r border-border bg-muted/10 px-4 text-lg font-bold text-muted">
                   +265
                 </div>
@@ -178,11 +182,14 @@ export default function WithdrawPage() {
                   className="flex-1 bg-transparent px-4 text-lg font-semibold outline-none disabled:opacity-60"
                 />
               </div>
+              {phone !== "" && (!/^\d+$/.test(phone.trim().replace(/^(\+?265|0)/, "")) || phone.trim().replace(/^(\+?265|0)/, "").length !== 9) && (
+                <p className="mt-1 text-xs text-red-500">Please enter a valid 9-digit phone number.</p>
+              )}
 
               <p className="mt-6 text-sm font-semibold text-muted">Amount (USDC)</p>
               <div
                 className={`mt-2 flex items-center rounded-xl border bg-surface ${
-                  exceedsUsdBalance ? "border-red-500" : "border-border"
+                  exceedsUsdBalance || (amount !== "" && activeProvider && amountNum < activeProvider.min_amount) ? "border-red-500" : "border-border"
                 }`}
               >
                 <span className="pl-4 text-lg font-semibold text-muted">$</span>
@@ -200,9 +207,13 @@ export default function WithdrawPage() {
                 <span>{`1 USD ≈ ${rate.toLocaleString()} MWK`}</span>
               </div>
               
-              {exceedsUsdBalance && (
+              {exceedsUsdBalance ? (
                 <p className="mt-1 text-sm text-red-500">Amount exceeds your USD balance.</p>
-              )}
+              ) : amount !== "" && activeProvider && amountNum < activeProvider.min_amount ? (
+                <p className="mt-1 text-sm text-red-500">Amount must be at least {activeProvider.min_amount} {activeProvider.currency}.</p>
+              ) : activeProvider ? (
+                <p className="mt-1 text-xs text-muted">Min: {activeProvider.min_amount} {activeProvider.currency}</p>
+              ) : null}
 
               {amountNum > 0 && !exceedsUsdBalance && (
                 <div className="mt-6 space-y-3 rounded-xl bg-[#111] p-4 text-sm shadow-inner">
@@ -230,7 +241,16 @@ export default function WithdrawPage() {
               <button
                 type="button"
                 onClick={handleWithdraw}
-                disabled={!amount || !phone || !email || exceedsUsdBalance || submitting || !selectedProviderId}
+                disabled={
+                  !amount || 
+                  !phone || 
+                  !email || 
+                  exceedsUsdBalance || 
+                  submitting || 
+                  !selectedProviderId || 
+                  (activeProvider && amountNum < activeProvider.min_amount) || 
+                  (!/^\\d+$/.test(phone.trim().replace(/^(\\+?265|0)/, "")) || phone.trim().replace(/^(\\+?265|0)/, "").length !== 9)
+                }
                 className="mt-8 h-[52px] w-full rounded-xl bg-brand-green text-sm font-bold text-white disabled:bg-border disabled:text-muted transition"
               >
                 {submitting ? "Processing payout…" : "Confirm withdrawal"}

@@ -150,7 +150,11 @@ export default function OnrampPage() {
 
               <div className="mb-4">
                 <label className="mb-1 block text-sm font-semibold text-muted">Phone Number</label>
-                <div className="flex h-[52px] w-full overflow-hidden rounded-xl border border-border bg-transparent focus-within:border-brand-green">
+                <div className={`flex h-[52px] w-full overflow-hidden rounded-xl border bg-transparent focus-within:border-brand-green ${
+                  phone !== "" && (!/^\\d+$/.test(phone.trim().replace(/^(\\+?265|0)/, "")) || phone.trim().replace(/^(\\+?265|0)/, "").length !== 9)
+                    ? "border-red-500" 
+                    : "border-border"
+                }`}>
                   <div className="flex items-center justify-center border-r border-border bg-muted/10 px-4 text-sm font-bold text-muted">
                     +265
                   </div>
@@ -162,6 +166,9 @@ export default function OnrampPage() {
                     className="flex-1 bg-transparent px-4 py-3 text-sm font-semibold outline-none"
                   />
                 </div>
+                {phone !== "" && (!/^\d+$/.test(phone.trim().replace(/^(\+?265|0)/, "")) || phone.trim().replace(/^(\+?265|0)/, "").length !== 9) && (
+                  <p className="mt-1 text-xs text-red-500">Please enter a valid 9-digit phone number.</p>
+                )}
               </div>
 
               <div className="mb-4">
@@ -171,13 +178,21 @@ export default function OnrampPage() {
                   placeholder="2000"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-transparent px-4 py-3 text-sm font-semibold outline-none"
+                  className={`w-full rounded-xl border bg-transparent px-4 py-3 text-sm font-semibold outline-none ${
+                    amount !== "" && activeProvider && Number(amount) < activeProvider.min_amount
+                      ? "border-red-500"
+                      : "border-border"
+                  }`}
                 />
-                {activeProvider && (
+                {amount !== "" && activeProvider && Number(amount) < activeProvider.min_amount ? (
+                  <p className="mt-1 text-xs text-red-500">
+                    Amount must be at least {activeProvider.min_amount} {activeProvider.currency}.
+                  </p>
+                ) : activeProvider ? (
                   <p className="mt-1 text-xs text-muted">
                     Min: {activeProvider.min_amount} {activeProvider.currency}
                   </p>
-                )}
+                ) : null}
               </div>
 
               <div className="mb-6 rounded-lg bg-[#111] p-4 text-sm">
@@ -198,7 +213,13 @@ export default function OnrampPage() {
               <button
                 type="button"
                 onClick={handleOnramp}
-                disabled={busy}
+                disabled={
+                  busy || 
+                  !amount || 
+                  !phone || 
+                  (activeProvider && Number(amount) < activeProvider.min_amount) || 
+                  (!/^\d+$/.test(phone.trim().replace(/^(\+?265|0)/, "")) || phone.trim().replace(/^(\+?265|0)/, "").length !== 9)
+                }
                 className="h-12 w-full rounded-xl bg-brand-green text-sm font-bold text-white disabled:opacity-60"
               >
                 {busy ? "Processing..." : "Continue"}
