@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const ELEMENTPAY_API = "https://api.elementpay.net/api/v1";
-const API_KEY = process.env.ELEMENTPAY_LIVE_API_KEY;
+const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://sandbox.elementpay.net/api/v1";
+const API_KEY = process.env.ELEMENTPAY_SANDBOX_API;
 const WALLET_ADDRESS = "0x4821ced48Fb4456055c86E42587f61c1F39c6315";
 
 export async function POST(req: Request) {
@@ -16,6 +16,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "ElementPay API key not configured" }, { status: 500 });
     }
 
+    // In sandbox testing, use test dummy phone (+2651111111111) for deterministic success
+    const isSandbox = Boolean(process.env.ELEMENTPAY_SANDBOX_API);
+    const testPhone = isSandbox ? "+2651111111111" : phone;
+    const uniqueCustomerUid = `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
     // 1. Create a Quote
     const quoteRes = await fetch(`${ELEMENTPAY_API}/partner/orders/quote`, {
       method: "POST",
@@ -27,18 +32,18 @@ export async function POST(req: Request) {
         order_type: "OnRamp",
         currency: "MWK",
         country: "MW",
-        local_amount: amount,
+        local_amount: Number(amount),
         asset: {
           token: "0x833589fcd6edb6e08f4c7c32d4f71b54bdA02913",
           currency: "USDC",
           network: "BASE",
         },
         customer: {
-          uid: `user-${Date.now()}`,
+          uid: uniqueCustomerUid,
           type: "user",
-          name: "Sandbox User",
+          name: "Jane Doe",
           country: "MW",
-          phone: phone,
+          phone: testPhone,
           address: "Lilongwe",
           dob: "01/01/1990",
           email: "sandbox@zotheka.com",
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
         },
         payment_method: {
           type: "mobile_money",
-          phone_number: phone,
+          phone_number: testPhone,
           network_id: providerId,
         },
         wallet_address: WALLET_ADDRESS,

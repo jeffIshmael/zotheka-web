@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const ELEMENTPAY_API = "https://api.elementpay.net/api/v1";
-const API_KEY = process.env.ELEMENTPAY_LIVE_API_KEY;
+const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://sandbox.elementpay.net/api/v1";
+const API_KEY = process.env.ELEMENTPAY_SANDBOX_API;
 
 export async function POST(request: Request) {
   try {
@@ -16,21 +16,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // SIMULATED: In a real app, verify user's balance in the DB.
-    // For MVP sandbox, we will just simulate a deduction.
-    // Fee Calculation: 2%
+    // SIMULATED: Fee Calculation: 2%
     const withdrawalAmount = Number(amount);
     const platformFee = withdrawalAmount * 0.02;
     const netAmount = withdrawalAmount - platformFee;
+
+    // Sandbox configuration rules
+    const isSandbox = Boolean(process.env.ELEMENTPAY_SANDBOX_API);
+    const testPhone = isSandbox ? "+2651111111111" : phone;
+    const uniqueCustomerUid = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    // In Sandbox, including "Successful" in customer.name triggers auto-credit order.settled
+    const customerName = isSandbox ? "Successful Sandbox User" : "Sandbox User";
 
     // Build the OffRamp quote payload using ElementPay sandbox testing details.
     const quotePayload = {
       order_type: "OffRamp",
       customer: {
-        uid: email,
-        name: "Sandbox User",
+        uid: uniqueCustomerUid,
+        name: customerName,
         email: email,
-        phone_number: phone,
+        phone: testPhone,
         dob: "01/01/1990",
         address: "123 Main St, Lilongwe",
         country: "MW",
@@ -39,19 +44,18 @@ export async function POST(request: Request) {
       },
       payment_method: {
         type: "mobile_money",
-        phone_number: phone,
+        phone_number: testPhone,
         network_id: providerId
       },
       asset: {
         currency: "USDC",
-        network: "base",
+        network: "BASE",
         token: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
       },
       crypto_amount: netAmount,
       country: "MW",
       currency: "MWK",
       refund_address: "0x4821ced48Fb4456055c86E42587f61c1F39c6315",
-      network_id: providerId
     };
 
     // 1. Create Quote

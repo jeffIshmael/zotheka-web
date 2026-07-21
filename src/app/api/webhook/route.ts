@@ -46,20 +46,45 @@ export async function POST(req: Request) {
     }
 
     const event = req.headers.get("x-webhook-event");
+    const webhookId = req.headers.get("x-webhook-id");
     const payload = JSON.parse(rawBodyBuffer.toString());
 
+    console.log("==========================================");
+    console.log(`📩 [ElementPay Webhook Incoming Trigger]`);
+    console.log(`Timestamp: ${new Date().toISOString()}`);
+    console.log(`Event: ${event || "N/A"}`);
+    console.log(`Webhook ID: ${webhookId || "N/A"}`);
+    console.log(`Signature Header: ${signatureHeader || "N/A"}`);
+    console.log("Payload:", JSON.stringify(payload, null, 2));
+    console.log("==========================================");
+
     if (event === "order.settled") {
-      console.log(`✅ [ElementPay] Order ${payload.order_id} settled — hash ${payload.settlement_transaction_hash}`);
-      // Future logic: update user balance or notify user
+      console.log(
+        `✅ [ElementPay Webhook] Order ${payload.order_id} SETTLED — Fiat: ${payload.amount_fiat} ${payload.currency}, Crypto: ${payload.amount_crypto} USDC, TxHash: ${payload.settlement_transaction_hash || "N/A"}`
+      );
+      // Future logic: update user balance or notify user in DB
     } else if (event === "order.failed") {
-      console.log(`❌ [ElementPay] Order ${payload.order_id} failed — reason: ${payload.reason || payload.failure_reason || "UNKNOWN"}`);
+      console.log(
+        `❌ [ElementPay Webhook] Order ${payload.order_id} FAILED — Reason: ${payload.reason || payload.failure_reason || "UNKNOWN"}`
+      );
     } else if (event === "order.processing") {
-      console.log(`⏳ [ElementPay] Order ${payload.order_id} is processing on the payment rail.`);
+      console.log(
+        `⏳ [ElementPay Webhook] Order ${payload.order_id} PROCESSING on payment rail.`
+      );
+    } else if (event === "order.refunded") {
+      console.log(
+        `↩️ [ElementPay Webhook] Order ${payload.order_id} REFUNDED.`
+      );
     } else {
-      console.log(`🔔 [ElementPay] Received unhandled event ${event} for order ${payload.order_id}`);
+      console.log(
+        `🔔 [ElementPay Webhook] Received unhandled event "${event}" for order ${payload.order_id}`
+      );
     }
 
-    return new NextResponse("", { status: 200 });
+    return new NextResponse(JSON.stringify({ received: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Webhook Error", error);
     return NextResponse.json({ error: "Internal Webhook Error" }, { status: 500 });

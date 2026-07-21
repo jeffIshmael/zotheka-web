@@ -104,6 +104,13 @@ export default function OnrampPage() {
       <h1 className="mt-6 text-2xl font-extrabold">Add MWK (OnRamp)</h1>
       <p className="mt-2 text-sm text-muted">Deposit MWK via Mobile Money to receive USDC.</p>
 
+      <div className="mt-4 flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-400 font-semibold">
+        <span>🧪</span>
+        <p>
+          <strong>ElementPay Sandbox Mode:</strong> Real money movement is simulated. Test transactions will automatically settle using sandbox rules.
+        </p>
+      </div>
+
       {loading ? (
         <div className="mt-12 flex justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-green border-t-transparent" />
