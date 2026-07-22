@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://sandbox.elementpay.net/api/v1";
-const API_KEY = process.env.ELEMENTPAY_SANDBOX_API;
+const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://api.elementpay.net/api/v1";
+const API_KEY = process.env.ELEMENTPAY_LIVE_API_KEY;
 
 export async function POST(request: Request) {
   try {
@@ -16,35 +17,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Fetch user KYC from DB
+    const userKyc = await prisma.userKyc.findUnique({
+      where: { email },
+    });
+
+    if (!userKyc) {
+      return NextResponse.json({ error: "User KYC not found" }, { status: 404 });
+    }
+
+    // Format DOB from "YYYY-MM-DD" to "MM/DD/YYYY"
+    let dob = "01/01/1990";
+    if (userKyc.dateOfBirth) {
+      const parts = userKyc.dateOfBirth.split("-");
+      if (parts.length === 3) {
+        dob = `${parts[1]}/${parts[2]}/${parts[0]}`;
+      }
+    }
+
     // SIMULATED: Fee Calculation: 2%
     const withdrawalAmount = Number(amount);
     const platformFee = withdrawalAmount * 0.02;
     const netAmount = withdrawalAmount - platformFee;
 
-    // Sandbox configuration rules
-    const isSandbox = Boolean(process.env.ELEMENTPAY_SANDBOX_API);
-    const testPhone = isSandbox ? "+2651111111111" : phone;
-    const uniqueCustomerUid = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    // In Sandbox, including "Successful" in customer.name triggers auto-credit order.settled
-    const customerName = isSandbox ? "Successful Sandbox User" : "Sandbox User";
-
-    // Build the OffRamp quote payload using ElementPay sandbox testing details.
+    // Build the OffRamp quote payload using real user details
     const quotePayload = {
       order_type: "OffRamp",
       customer: {
-        uid: uniqueCustomerUid,
-        name: customerName,
-        email: email,
-        phone: testPhone,
-        dob: "01/01/1990",
-        address: "123 Main St, Lilongwe",
+        uid: `user-${userKyc.id}`,
+        name: `${userKyc.firstName} ${userKyc.lastName}`,
+        email: userKyc.email,
+        phone: userKyc.phoneNumber || phone,
+        dob: dob,
+        address: userKyc.city,
         country: "MW",
-        id_type: "national_id",
-        id_number: "MW12345678"
+        id_type: userKyc.idType,
+        id_number: userKyc.idNumber
       },
       payment_method: {
         type: "mobile_money",
-        phone_number: testPhone,
+        phone_number: userKyc.phoneNumber || phone,
         network_id: providerId
       },
       asset: {

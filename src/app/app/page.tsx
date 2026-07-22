@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BackendRequestError, buyGiftCard, getMonitor, makeChargeId } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [buyOpen, setBuyOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState<{ code: string; amount: number } | null>(null);
+  const [kycVerified, setKycVerified] = useState<boolean | null>(null);
 
   const unitMwk = usdToMwk(netflix.usdAmount, rate);
 
@@ -23,7 +25,14 @@ export default function HomePage() {
     getMonitor()
       .then((m) => setRate(resolveUsdToMwkRate(m.usd_to_mwk_rate)))
       .catch(() => undefined);
-  }, []);
+
+    if (email) {
+      fetch(`/api/kyc/status?email=${encodeURIComponent(email)}`)
+        .then((r) => r.json())
+        .then((d) => setKycVerified(d.verified))
+        .catch(() => undefined);
+    }
+  }, [email]);
 
   const handleBuy = useCallback(
     async (payload: { quantity: number; phone: string }) => {
@@ -83,6 +92,17 @@ export default function HomePage() {
         <div>
           <p className="text-sm font-medium text-muted">Hello 👋</p>
           <h1 className="text-2xl font-extrabold">Pay globally</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          {kycVerified === false && (
+            <Link href="/app/kyc" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-green/10 border border-brand-green/20 text-brand-green text-xs font-bold hover:bg-brand-green/20 transition">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              Verify Profile
+            </Link>
+          )}
+          <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-sm font-bold text-brand-black shadow-inner uppercase">
+            {email ? email.charAt(0) : "U"}
+          </div>
         </div>
       </div>
 

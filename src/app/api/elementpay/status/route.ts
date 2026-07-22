@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://sandbox.elementpay.net/api/v1";
-const API_KEY = process.env.ELEMENTPAY_SANDBOX_API;
+const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://api.elementpay.net/api/v1";
+const API_KEY = process.env.ELEMENTPAY_LIVE_API_KEY;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

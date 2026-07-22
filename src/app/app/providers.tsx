@@ -10,7 +10,6 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 const NAV_ITEMS = [
   { href: "/app", label: "Home", icon: HomeIcon },
   { href: "/app/purchases", label: "My purchases", icon: BagIcon },
-    { href: "/app/onramp", label: "Get USD", icon: PlusIcon },
   { href: "/app/history", label: "History", icon: ClockIcon },
   { href: "/app/account", label: "Account", icon: UserIcon },
 ];
@@ -21,7 +20,8 @@ function AppShell({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   const isSignIn = pathname === "/app/sign-in";
-  const showNav = !isSignIn;
+  const isKyc = pathname === "/app/kyc";
+  const showNav = !isSignIn && !isKyc;
 
   useEffect(() => {
     if (isLoading) return;

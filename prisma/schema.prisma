@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model UserKyc {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  firstName      String
+  lastName       String
+  phoneNumber    String?
+  network        String?
+  dateOfBirth    String   // e.g. "1990-01-01"
+  streetAddress  String
+  city           String
+  state          String
+  postalCode     String
+  country        String
+  idType         String   // e.g. "passport", "drivers_license"
+  idNumber       String
+  idImageFront   String?  // base64 string or url
+  idImageBack    String?  // base64 string or url
+  selfieImage    String?  // base64 string or url
+  tosAccepted    Boolean  @default(false)
+  bridgeCustomerId String? // for storing the bridge customer ID once created
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

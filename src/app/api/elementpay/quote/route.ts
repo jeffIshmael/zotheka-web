@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://sandbox.elementpay.net/api/v1";
-const API_KEY = process.env.ELEMENTPAY_SANDBOX_API;
-const WALLET_ADDRESS = "0x4821ced48Fb4456055c86E42587f61c1F39c6315";
+const ELEMENTPAY_API = process.env.ELEMENTPAY_API_URL || "https://api.elementpay.net/api/v1";
+const API_KEY = process.env.ELEMENTPAY_LIVE_API_KEY;
 
 export async function POST(req: Request) {
   try {
-    const { phone, amount, providerId } = await req.json();
+    const { phone, amount, providerId, walletAddress, email } = await req.json();
 
-    if (!phone || !amount || !providerId) {
+    if (!phone || !amount || !providerId || !walletAddress || !email) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -16,10 +16,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "ElementPay API key not configured" }, { status: 500 });
     }
 
-    // In sandbox testing, use test dummy phone (+2651111111111) for deterministic success
-    const isSandbox = Boolean(process.env.ELEMENTPAY_SANDBOX_API);
-    const testPhone = isSandbox ? "+2651111111111" : phone;
-    const uniqueCustomerUid = `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    // Fetch user KYC from DB
+    const userKyc = await prisma.userKyc.findUnique({
+      where: { email },
+    });
+
+    if (!userKyc) {
+      return NextResponse.json({ error: "User KYC not found" }, { status: 404 });
+    }
+
+    // Format DOB from "YYYY-MM-DD" to "MM/DD/YYYY"
+    let dob = "01/01/1990";
+    if (userKyc.dateOfBirth) {
+      const parts = userKyc.dateOfBirth.split("-");
+      if (parts.length === 3) {
+        dob = `${parts[1]}/${parts[2]}/${parts[0]}`;
+      }
+    }
+
+    console.log(dob);
 
     // 1. Create a Quote
     const quoteRes = await fetch(`${ELEMENTPAY_API}/partner/orders/quote`, {
@@ -39,23 +54,23 @@ export async function POST(req: Request) {
           network: "BASE",
         },
         customer: {
-          uid: uniqueCustomerUid,
+          uid: `user-${userKyc.id}`,
           type: "user",
-          name: "Jane Doe",
-          country: "MW",
-          phone: testPhone,
-          address: "Lilongwe",
-          dob: "01/01/1990",
-          email: "sandbox@zotheka.com",
-          id_number: "12345678",
-          id_type: "national_id",
+          name: `${userKyc.firstName} ${userKyc.lastName}`,
+          country: "MW", // Or map from userKyc.country if ElementPay uses ISO codes
+          phone: userKyc.phoneNumber || phone,
+          address: userKyc.city,
+          dob: dob,
+          email: userKyc.email,
+          id_number: userKyc.idNumber,
+          id_type: userKyc.idType,
         },
         payment_method: {
           type: "mobile_money",
-          phone_number: testPhone,
+          phone_number: userKyc.phoneNumber || phone,
           network_id: providerId,
         },
-        wallet_address: WALLET_ADDRESS,
+        wallet_address: walletAddress,
       }),
     });
 
