@@ -11,7 +11,7 @@ type Props = {
   onSuccess: () => void;
 };
 
-const USDC_CONTRACT = "0x833589fcd6edb6e08f4c7c32d4f71b54bdA02913";
+const USDC_CONTRACT = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 
 // Simple ERC20 transfer encoder
 function encodeErc20Transfer(to: string, amount: bigint): string {
