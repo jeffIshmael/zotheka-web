@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMonitor, getUserProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { usePrivy } from "@privy-io/react-auth";
+import { getUsdcBalance } from "@/lib/base";
 import { resolveUsdToMwkRate } from "@/lib/config";
 import { useAppData } from "@/lib/app-data";
 
@@ -22,6 +24,8 @@ type OrderState = "idle" | "prompt_sent" | "settled" | "failed";
 export default function WithdrawPage() {
   const router = useRouter();
   const { email } = useAuth();
+  const { user } = usePrivy();
+  const walletAddress = user?.wallet?.address;
   const { kycPhone, kycVerified, kycNetwork } = useAppData();
 
   const [loading, setLoading] = useState(true);
@@ -49,13 +53,15 @@ export default function WithdrawPage() {
   const fetchData = useCallback(async () => {
     if (!email) return;
     try {
-      const [profileRes, monitorRes, infoRes] = await Promise.all([
-        getUserProfile(email).catch(() => null),
+      const [monitorRes, infoRes] = await Promise.all([
         getMonitor().catch(() => null),
         fetch("/api/elementpay/info?order_type=OffRamp").then((r) => r.json()),
       ]);
 
-      if (profileRes) setAvailableBalance(profileRes.usd_balance);
+      if (walletAddress) {
+        const realBalance = await getUsdcBalance(walletAddress).catch(() => 0);
+        setAvailableBalance(realBalance);
+      }
 
       if (monitorRes) {
         setRate(resolveUsdToMwkRate(monitorRes.usd_to_mwk_rate));
@@ -80,7 +86,7 @@ export default function WithdrawPage() {
     } finally {
       setLoading(false);
     }
-  }, [email, kycNetwork]);
+  }, [email, kycNetwork, walletAddress]);
 
   useEffect(() => {
     fetchData();
@@ -358,24 +364,13 @@ export default function WithdrawPage() {
           {orderState === "idle" && (
             <>
               <p className="mt-2 text-sm font-semibold text-muted">Network</p>
-              <div className="mt-2 flex gap-2">
-                {providers.map((item) => {
-                  const selected = selectedProviderId === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setSelectedProviderId(item.id)}
-                      className={`flex h-14 flex-1 items-center justify-center rounded-xl border px-3 text-sm font-bold ${
-                        selected
-                          ? "border-brand-green bg-brand-green-light text-brand-green-dark"
-                          : "border-border bg-surface text-muted hover:text-text"
-                      }`}
-                    >
-                      {item.name}
-                    </button>
-                  );
-                })}
+              <div className="mt-2 flex h-[52px] w-full overflow-hidden rounded-xl border border-border bg-surface">
+                <input
+                  type="text"
+                  value={activeProvider?.name || kycNetwork || "Loading..."}
+                  disabled={true}
+                  className="flex-1 bg-transparent px-4 text-lg font-semibold outline-none disabled:opacity-60"
+                />
               </div>
 
               <p className="mt-6 text-sm font-semibold text-muted">Phone Number</p>
