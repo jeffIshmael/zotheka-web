@@ -20,7 +20,7 @@ export function PrivyProvider({ children }: { children: ReactNode }) {
           accentColor: "#007A33",
         },
         embeddedWallets: {
-          createOnLogin: "off",
+          createOnLogin: "users-without-wallets",
         },
       }}
     >

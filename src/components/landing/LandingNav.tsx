@@ -18,6 +18,8 @@ export function LandingNav() {
 
         <Link
           href="/app"
+          target="_blank"
+          rel="noopener noreferrer"
           className="flex items-center gap-1.5 rounded-full bg-brand-green px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-brand-green/40 transition hover:bg-brand-green-dark"
         >
           Launch MVP web app

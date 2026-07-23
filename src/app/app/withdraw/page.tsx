@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getMonitor, getUserProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { usePrivy } from "@privy-io/react-auth";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { getUsdcBalance } from "@/lib/base";
 import { resolveUsdToMwkRate } from "@/lib/config";
 import { useAppData } from "@/lib/app-data";
@@ -25,7 +26,8 @@ export default function WithdrawPage() {
   const router = useRouter();
   const { email } = useAuth();
   const { user } = usePrivy();
-  const walletAddress = user?.wallet?.address;
+  const { client } = useSmartWallets();
+  const walletAddress = client?.account?.address || user?.wallet?.address;
   const { kycPhone, kycVerified, kycNetwork } = useAppData();
 
   const [loading, setLoading] = useState(true);
@@ -197,6 +199,31 @@ export default function WithdrawPage() {
 
       const createdOrder = data.order || {};
       const orderId = createdOrder.order_id || createdOrder.id || createdOrder.quote_id;
+
+      const depositAddress = createdOrder.payment_instructions?.deposit_address || createdOrder.payment_instructions?.address;
+      
+      if (!depositAddress) {
+        throw new Error("Missing deposit address from payment gateway");
+      }
+
+      // Execute on-chain transfer to the deposit address
+      const amountUnits = BigInt(Math.floor(amountNum * 1_000_000));
+      const cleanAddress = depositAddress.startsWith("0x") ? depositAddress.slice(2) : depositAddress;
+      const paddedAddress = cleanAddress.padStart(64, "0");
+      const hexAmount = amountUnits.toString(16).padStart(64, "0");
+      const txData = `0xa9059cbb${paddedAddress}${hexAmount}`;
+
+      if (!client) {
+         throw new Error("Smart Wallet client not ready. Please try again.");
+      }
+
+      await client.sendTransaction({
+        calls: [{
+          to: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base
+          data: txData as `0x${string}`,
+          value: BigInt(0)
+        }]
+      });
 
       setOrderData({
         ...createdOrder,
