@@ -15,6 +15,7 @@
     "@privy-io/react-auth": "^2.25.0",
     "lucide-react": "^1.25.0",
     "next": "^15.3.3",
+    "ox": "^1.0.5",
     "permissionless": "^0.2.57",
     "prisma": "^6.19.3",
     "react": "^19.1.0",
