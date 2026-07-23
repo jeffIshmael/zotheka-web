@@ -70,7 +70,8 @@ export function SendUsdcModal({ visible, walletAddress, balance, onClose, onSucc
       const txReceipt = await sendTransaction({
         to: USDC_CONTRACT,
         data,
-        value: "0x0"
+        value: "0x0",
+        chainId: 8453
       });
 
       if (txReceipt && txReceipt.hash) {

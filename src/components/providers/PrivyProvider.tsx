@@ -2,6 +2,7 @@
 
 import { PrivyProvider as BasePrivyProvider } from "@privy-io/react-auth";
 import { ReactNode } from "react";
+import { base } from "viem/chains";
 import { PRIVY_APP_ID, PRIVY_CLIENT_ID } from "@/lib/privy-config";
 
 export function PrivyProvider({ children }: { children: ReactNode }) {
@@ -10,6 +11,8 @@ export function PrivyProvider({ children }: { children: ReactNode }) {
       appId={PRIVY_APP_ID}
       clientId={PRIVY_CLIENT_ID}
       config={{
+        defaultChain: base,
+        supportedChains: [base],
         loginMethods: ["email", "google"],
         appearance: {
           theme: "light",
