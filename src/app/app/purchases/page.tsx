@@ -2,17 +2,26 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getSavedPurchases, type SavedPurchase } from "@/lib/storage";
+import { getTransactions, type Transaction } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 export default function PurchasesPage() {
-  const [orders, setOrders] = useState<SavedPurchase[]>([]);
+  const { email } = useAuth();
+  const [orders, setOrders] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
+    if (!email) return;
     setLoading(true);
-    setOrders(getSavedPurchases());
-    setLoading(false);
-  }, []);
+    try {
+      const data = await getTransactions(email, "PURCHASE");
+      setOrders(data.transactions || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [email]);
 
   useEffect(() => {
     load();
@@ -40,25 +49,32 @@ export default function PurchasesPage() {
         </div>
       ) : (
         <ul className="mt-6 space-y-3">
-          {orders.map((order) => (
-            <li key={order.id} className="rounded-2xl bg-surface p-4 shadow-card">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">{order.productName} gift card</p>
-                  <p className="text-sm text-muted">${order.usdAmount} USD · {order.date}</p>
+          {orders.map((order) => {
+            const dateStr = new Date(order.created_at || order.createdAt).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+            return (
+              <li key={order.id} className="rounded-2xl bg-surface p-4 shadow-card">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-bold">{order.productName || "Gift"} card</p>
+                    <p className="text-sm text-muted">${order.usdAmount} USD · {dateStr}</p>
+                  </div>
+                  <span className="rounded-full bg-brand-green-light px-2.5 py-1 text-xs font-bold text-brand-green-dark">
+                    {order.status}
+                  </span>
                 </div>
-                <span className="rounded-full bg-brand-green-light px-2.5 py-1 text-xs font-bold text-brand-green-dark">
-                  {order.status}
-                </span>
-              </div>
-              <p className="mt-3 text-sm text-muted">Paid MK {order.mwk.toLocaleString()}</p>
-              {order.code ? (
-                <p className="mt-2 rounded-lg bg-background px-3 py-2 font-mono text-sm font-bold text-brand-green-dark">
-                  {order.code}
-                </p>
-              ) : null}
-            </li>
-          ))}
+                <p className="mt-3 text-sm text-muted">Paid MK {Number(order.amount).toLocaleString()}</p>
+                {order.code ? (
+                  <p className="mt-2 rounded-lg bg-background px-3 py-2 font-mono text-sm font-bold text-brand-green-dark">
+                    {order.code}
+                  </p>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -4,13 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { getMonitor } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { resolveUsdToMwkRate } from "@/lib/config";
 import { usePrivy } from "@privy-io/react-auth";
 import { getUsdcBalance } from "@/lib/base";
 import { AddUsdModal } from "@/components/app/AddUsdModal";
-import { User, CreditCard, Info, FileText, Shield, MessageCircle, LogOut, ChevronRight, ExternalLink, MoveUpRightIcon } from "lucide-react";
+import { SendUsdcModal } from "@/components/app/SendUsdcModal";
+import { User, CreditCard, Info, FileText, Shield, MessageCircle, LogOut, ChevronRight, ExternalLink, MoveUpRightIcon, Lock, RefreshCw, AlertTriangle } from "lucide-react";
+import { useAppData } from "@/lib/app-data";
 
 const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -23,52 +23,46 @@ export default function AccountPage() {
   const { email, signOut } = useAuth();
   const { user } = usePrivy();
   const walletAddress = user?.wallet?.address;
+  const { kycVerified, kycPhone, kycNetwork, rate, loading: dataLoading, refresh: refreshData } = useAppData();
   
   const [usdBalance, setUsdBalance] = useState(0);
-  const [rate, setRate] = useState(1700);
-  const [loading, setLoading] = useState(true);
+  const [balanceLoading, setBalanceLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [kycVerified, setKycVerified] = useState<boolean | null>(null);
-  const [kycPhone, setKycPhone] = useState<string | null>(null);
-  const [kycNetwork, setKycNetwork] = useState<string | null>(null);
   
   const [addUsdOpen, setAddUsdOpen] = useState(false);
+  const [sendUsdcOpen, setSendUsdcOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  const refresh = useCallback(async () => {
-    if (!email) return;
-    setLoading(true);
+  const refreshBalance = useCallback(async () => {
+    if (!walletAddress) {
+      setBalanceLoading(false);
+      return;
+    }
+    setBalanceLoading(true);
     setError(null);
     try {
-      const [monitor, kycRes, balance, elementPayInfo] = await Promise.all([
-        getMonitor().catch(() => null),
-        fetch(`/api/kyc/status?email=${encodeURIComponent(email)}`).then(r => r.json()).catch(() => ({ verified: false, phone: null })),
-        walletAddress ? getUsdcBalance(walletAddress) : Promise.resolve(0),
-        fetch(`/api/elementpay/info`).then(r => r.json()).catch(() => null)
-      ]);
+      const balance = await getUsdcBalance(walletAddress);
       setUsdBalance(balance);
-      
-      // Prioritize ElementPay live rate, fallback to monitor rate, then config default
-      if (elementPayInfo?.rate?.buy) {
-        setRate(elementPayInfo.rate.buy);
-      } else if (monitor) {
-        setRate(resolveUsdToMwkRate(monitor.usd_to_mwk_rate));
-      }
-      setKycVerified(kycRes.verified);
-      setKycPhone(kycRes.phone || null);
-      setKycNetwork(kycRes.network || null);
     } catch {
-      setError("Could not load account.");
+      setError("Could not load balance.");
     } finally {
-      setLoading(false);
+      setBalanceLoading(false);
     }
-  }, [email, walletAddress]);
+  }, [walletAddress]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void refreshBalance();
+  }, [refreshBalance]);
 
+  const refreshAll = () => {
+    refreshData();
+    refreshBalance();
+  };
+
+  const isMalawi = kycPhone?.startsWith("+265");
+  const loading = dataLoading || balanceLoading;
   const mwkBalance = usdBalance * rate;
+  const showSendButton = process.env.NEXT_PUBLIC_SHOW_SEND_BUTTON === "true";
 
   const handleSignOut = () => {
     signOut();
@@ -77,11 +71,21 @@ export default function AccountPage() {
 
   return (
     <div className="px-4 pt-4 pb-4">
-      <h1 className="text-2xl font-extrabold">Account</h1>
+      <h1 className="text-2xl font-extrabold text-brand-black">Account</h1>
 
-      <div className="mt-6 rounded-2xl bg-brand-green-dark p-6 text-white">
+      <div className="mt-6 rounded-2xl bg-brand-green-dark p-6 text-white shadow-card">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-white/80">Your Balance</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-white/80">Your Balance</p>
+            <button
+              type="button"
+              onClick={refreshAll}
+              className={`text-white/60 hover:text-white transition ${loading ? "animate-spin" : ""}`}
+              aria-label="Refresh balance"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
           {loading ? (
             <div className="h-4 w-28 animate-pulse rounded bg-white/10" />
           ) : (
@@ -96,57 +100,83 @@ export default function AccountPage() {
           </div>
         ) : (
           <>
-            <p className="mt-2 text-5xl font-extrabold tracking-tight">$ {usdBalance.toFixed(2)}</p>
-            <p className="mt-1 text-xl font-semibold">= {Math.round(mwkBalance).toLocaleString()} MKW</p>
+            <p className="mt-3 text-5xl font-extrabold tracking-tight">$ {usdBalance.toFixed(2)}</p>
+            <p className="mt-1 text-xl font-semibold text-white/90">= {Math.round(mwkBalance).toLocaleString()} MKW</p>
           </>
         )}
 
-        {loading ? (
-          <div className="mt-6 grid grid-cols-2 gap-2">
-            <div className="h-[76px] animate-pulse rounded-xl bg-white/10" />
-            <div className="h-[76px] animate-pulse rounded-xl bg-white/10" />
-          </div>
-        ) : kycVerified ? (
-          <div className="mt-6 grid grid-cols-2 gap-2">
-            <Link
-              href="/app/withdraw"
-              className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-2 py-3 text-center text-xs font-bold text-brand-green-dark"
-            >
-              <span className="text-xl">↓</span>
-              Withdraw
-            </Link>
-            <button
-              onClick={() => setAddUsdOpen(true)}
-              className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-2 py-3 text-center text-xs font-bold text-brand-green-dark"
-            >
-              <span className="text-xl">+</span>
-              Deposit USD
-            </button>
-          </div>
-        ) : (
-          <div className="mt-6 flex flex-col items-center justify-center gap-2 rounded-xl bg-white/10 p-4 text-center">
-            <p className="text-sm font-medium text-white/90">Verify your identity to activate Add USD & Withdraw features</p>
-            <Link
-              href="/app/kyc"
-              className="mt-2 rounded-full bg-white px-6 py-2 text-sm font-bold text-brand-green-dark transition hover:bg-white/90"
-            >
-              Verify Account
-            </Link>
-          </div>
-        )}
+        <div className={`mt-7 grid gap-2 ${showSendButton ? "grid-cols-3" : "grid-cols-2"}`}>
+          {kycVerified ? (
+            <>
+              <Link
+                href="/app/withdraw"
+                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-2 py-3 text-center text-xs font-bold text-brand-green-dark transition hover:bg-white/90"
+              >
+                <span className="text-xl leading-none">↓</span>
+                Withdraw
+              </Link>
+              <button
+                onClick={() => setAddUsdOpen(true)}
+                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-2 py-3 text-center text-xs font-bold text-brand-green-dark transition hover:bg-white/90"
+              >
+                <span className="text-xl leading-none">+</span>
+                Deposit USD
+              </button>
+              {showSendButton && (
+                <button
+                  onClick={() => setSendUsdcOpen(true)}
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-2 py-3 text-center text-xs font-bold text-brand-green-dark transition hover:bg-white/90"
+                >
+                  <MoveUpRightIcon className="h-4 w-4 mb-0.5" />
+                  Send
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <Link
+                href="/app/kyc"
+                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/50 px-2 py-3 text-center text-xs font-bold text-brand-green-dark/60 transition hover:bg-white/60"
+              >
+                <Lock className="h-4 w-4" />
+                Withdraw
+              </Link>
+              <Link
+                href="/app/kyc"
+                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/50 px-2 py-3 text-center text-xs font-bold text-brand-green-dark/60 transition hover:bg-white/60"
+              >
+                <Lock className="h-4 w-4" />
+                Deposit USD
+              </Link>
+              {showSendButton && (
+                <Link
+                  href="/app/kyc"
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/50 px-2 py-3 text-center text-xs font-bold text-brand-green-dark/60 transition hover:bg-white/60"
+                >
+                  <Lock className="h-4 w-4" />
+                  Send
+                </Link>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+      {error && <p className="mt-4 text-sm font-semibold text-brand-red">{error}</p>}
 
-      <button
-        type="button"
-        onClick={() => void refresh()}
-        className="mt-4 text-sm font-semibold text-brand-green"
-      >
-        ↻ Refresh balance
-      </button>
+      {!kycVerified && !loading && (
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-brand-yellow/20 bg-brand-yellow/10 px-4 py-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-yellow/15 text-brand-yellow">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+          <p className="flex-1 text-sm font-semibold text-brand-yellow">Verify your identity to unlock features</p>
+          <Link href="/app/kyc" className="shrink-0 text-xs font-bold underline underline-offset-2 text-brand-yellow hover:opacity-80">
+            Verify Now
+          </Link>
+        </div>
+      )}
 
-      <p className="mt-8 text-xs font-bold uppercase tracking-wider text-muted">Settings</p>
+      <p className="mt-8 text-xs font-bold uppercase tracking-wider text-muted">Account</p>
       <div className="mt-3 overflow-hidden rounded-2xl bg-surface shadow-card flex flex-col divide-y divide-border">
         {/* Profile Details */}
         <button
@@ -157,9 +187,26 @@ export default function AccountPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-green/10 text-brand-green">
               <User className="h-4 w-4" />
             </div>
-            <span className="text-[15px] font-semibold text-brand-black">Profile Details</span>
+            <div className="flex flex-col">
+              <span className="text-[15px] font-semibold text-brand-black">Profile Details</span>
+              {kycVerified === false && (
+                <span className="mt-0.5 w-fit rounded-full bg-brand-yellow/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-yellow">
+                  Incomplete
+                </span>
+              )}
+            </div>
           </div>
-          <ChevronRight className="h-5 w-5 text-muted" />
+          {kycVerified === false ? (
+            <Link 
+              href="/app/kyc" 
+              className="rounded-full bg-brand-yellow px-3 py-1 text-xs font-bold text-white shadow-sm transition hover:bg-brand-yellow/90"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Verify
+            </Link>
+          ) : (
+            <ChevronRight className="h-5 w-5 text-muted" />
+          )}
         </button>
 
         {/* Virtual Card */}
@@ -177,7 +224,10 @@ export default function AccountPage() {
           </div>
           <span className="rounded-full bg-brand-black px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Coming Soon</span>
         </button>
+      </div>
 
+      <p className="mt-8 text-xs font-bold uppercase tracking-wider text-muted">Legal & Info</p>
+      <div className="mt-3 overflow-hidden rounded-2xl bg-surface shadow-card flex flex-col divide-y divide-border">
         {/* About */}
         <Link
           href="/app/about"
@@ -259,7 +309,7 @@ export default function AccountPage() {
       <button
         type="button"
         onClick={handleSignOut}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 py-4 text-center text-[15px] font-bold text-red-500 transition hover:bg-red-500/10"
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-brand-red/20 bg-brand-red/5 py-4 text-center text-[15px] font-bold text-brand-red transition hover:bg-brand-red/10"
       >
         <LogOut className="h-5 w-5" />
         Sign Out
@@ -275,7 +325,18 @@ export default function AccountPage() {
         onClose={() => setAddUsdOpen(false)}
         onSuccess={() => {
           setAddUsdOpen(false);
-          refresh(); // Refresh balance after successful onramp
+          refreshAll(); // Refresh balance after successful onramp
+        }}
+      />
+
+      <SendUsdcModal
+        visible={sendUsdcOpen}
+        walletAddress={walletAddress}
+        balance={usdBalance}
+        onClose={() => setSendUsdcOpen(false)}
+        onSuccess={() => {
+          setSendUsdcOpen(false);
+          refreshAll();
         }}
       />
 
@@ -323,7 +384,7 @@ export default function AccountPage() {
                 {kycVerified ? (
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-green text-white">✓</span>
                 ) : (
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white">!</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-yellow text-white">!</span>
                 )}
               </div>
             </div>

@@ -63,15 +63,20 @@ export type SimulateDepositResponse =
   | ApiError;
 
 export type Transaction = {
-  id: number;
+  id: string;
   type: string;
   amount: number;
-  currency: string;
+  usdAmount?: number;
   status: string;
-  charge_id: string;
-  phone: string;
+  chargeId?: string;
+  charge_id?: string;
+  productName?: string;
+  code?: string;
+  network?: string;
+  phone?: string;
   email: string;
-  created_at: string;
+  createdAt: string;
+  created_at?: string;
 };
 
 export class BackendRequestError extends Error {
@@ -115,8 +120,33 @@ export function getMonitor() {
   return request<MonitorStatus>("/monitor");
 }
 
-export function getTransactions() {
-  return request<{ transactions: Transaction[] }>("/api/transactions");
+export async function getTransactions(email: string, type?: string) {
+  const params = new URLSearchParams({ email });
+  if (type) params.append("type", type);
+  const response = await fetch(`/api/transactions?${params}`);
+  if (!response.ok) throw new Error("Failed to get transactions");
+  return response.json() as Promise<{ transactions: Transaction[] }>;
+}
+
+export async function saveTransaction(input: {
+  email: string;
+  type: string;
+  amount: number;
+  usdAmount?: number;
+  status: string;
+  productName?: string;
+  code?: string;
+  chargeId?: string;
+  network?: string;
+  phone?: string;
+}) {
+  const response = await fetch("/api/transactions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) throw new Error("Failed to save transaction");
+  return response.json() as Promise<{ transaction: Transaction }>;
 }
 
 export function getUserProfile(email: string) {

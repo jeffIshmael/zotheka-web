@@ -26,8 +26,9 @@ const COUNTRY_CODES = [
 ];
 
 const NETWORKS = [
-  { id: "3b589b9a-65d4-4246-b33a-f095dfc2977d", label: "Airtel Money" },
-  { id: "ac522946-3d5d-488e-bf73-583b8d8de908", label: "TNM Mpamba" }
+  { id: "airtel", label: "Airtel Money" },
+  { id: "tnm", label: "TNM Mpamba" },
+  { id: "safaricom", label: "Safaricom" }
 ];
 
 export default function KycPage() {
@@ -66,7 +67,7 @@ export default function KycPage() {
     lastName: "",
     phoneCode: "+265",
     phoneNumber: "",
-    network: "3b589b9a-65d4-4246-b33a-f095dfc2977d",
+    network: "airtel",
     dateOfBirth: "",
     streetAddress: "",
     city: "",
@@ -173,7 +174,7 @@ export default function KycPage() {
           </div>
           <h1 className="text-[2rem] font-black text-brand-black mb-4 tracking-tight">Congratulations</h1>
           <p className="text-muted leading-relaxed mb-12 text-[15px] px-6">
-            You have finished setting up your profile and have unlocked these features.
+            You have finished setting up your profile and have unlocked all features.
           </p>
         </div>
         
@@ -182,7 +183,9 @@ export default function KycPage() {
           style={{ width: "100%", maxWidth: MOBILE_MAX_WIDTH, transform: "translateX(-50%)" }}
         >
           <button 
-            onClick={() => router.push("/app/account")}
+            onClick={() => {
+              window.location.href = "/app/account";
+            }}
             className="w-full rounded-[1.25rem] bg-brand-black text-surface px-8 py-5 text-[17px] font-extrabold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             Home

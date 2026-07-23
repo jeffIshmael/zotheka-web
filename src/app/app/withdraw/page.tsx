@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getMonitor, getUserProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { resolveUsdToMwkRate } from "@/lib/config";
+import { useAppData } from "@/lib/app-data";
 
 type Provider = {
   id: string;
@@ -21,6 +22,7 @@ type OrderState = "idle" | "prompt_sent" | "settled" | "failed";
 export default function WithdrawPage() {
   const router = useRouter();
   const { email } = useAuth();
+  const { kycPhone, kycVerified, kycNetwork } = useAppData();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +30,7 @@ export default function WithdrawPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [amount, setAmount] = useState("");
-  const [phone, setPhone] = useState("");
+  // phone state is handled by kycPhone
 
   // Touched state for onBlur validation
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -67,14 +69,18 @@ export default function WithdrawPage() {
 
       if (infoRes?.providers && infoRes.providers.length > 0) {
         setProviders(infoRes.providers);
-        setSelectedProviderId(infoRes.providers[0].id);
+        
+        const matched = infoRes.providers.find((p: any) => 
+          p.id === kycNetwork || p.name?.toLowerCase().includes(kycNetwork?.toLowerCase() || "")
+        );
+        setSelectedProviderId(matched ? matched.id : infoRes.providers[0].id);
       }
     } catch (err) {
       console.error("Failed to load offramp info", err);
     } finally {
       setLoading(false);
     }
-  }, [email]);
+  }, [email, kycNetwork]);
 
   useEffect(() => {
     fetchData();
@@ -134,11 +140,13 @@ export default function WithdrawPage() {
   const isAmountTooSmall = amount !== "" && amountNum > 0 && minUsdRequired > 0 && amountNum < minUsdRequired;
 
   // Validation status
+  const isMalawi = kycVerified && kycPhone?.startsWith("+265");
+  const phone = kycPhone || "";
   const cleanPhone = phone.trim().replace(/^(\+?265|0)/, "");
   const isPhoneInvalid = phone !== "" && (!/^\d+$/.test(cleanPhone) || cleanPhone.length !== 9);
 
   // Show errors only after user leaves field (onBlur)
-  const showPhoneError = phoneTouched && isPhoneInvalid;
+  const showPhoneError = isPhoneInvalid && isMalawi;
   const showExceedsBalance = amountTouched && exceedsUsdBalance;
   const showAmountTooSmall = amountTouched && isAmountTooSmall;
 
@@ -210,7 +218,6 @@ export default function WithdrawPage() {
     setOrderData(null);
     setError(null);
     setAmount("");
-    setPhoneTouched(false);
     setAmountTouched(false);
   };
 
@@ -373,25 +380,19 @@ export default function WithdrawPage() {
 
               <p className="mt-6 text-sm font-semibold text-muted">Phone Number</p>
               <div
-                className={`mt-2 flex h-[52px] w-full overflow-hidden rounded-xl border bg-surface focus-within:ring-2 ring-brand-green ${
+                className={`mt-2 flex h-[52px] w-full overflow-hidden rounded-xl border bg-surface ${
                   showPhoneError ? "border-red-500" : "border-border"
                 }`}
               >
-                <div className="flex items-center justify-center border-r border-border bg-muted/10 px-4 text-lg font-bold text-muted">
-                  +265
-                </div>
                 <input
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  onBlur={() => setPhoneTouched(true)}
-                  placeholder="991234567"
-                  disabled={submitting}
+                  value={phone || "No phone found"}
+                  disabled={true}
                   className="flex-1 bg-transparent px-4 text-lg font-semibold outline-none disabled:opacity-60"
                 />
               </div>
               {showPhoneError && (
-                <p className="mt-1 text-xs text-red-500">Please enter a valid 9-digit phone number.</p>
+                <p className="mt-1 text-xs text-red-500">Your registered KYC number is invalid.</p>
               )}
 
               <p className="mt-6 text-sm font-semibold text-muted">Amount (USDC)</p>
@@ -413,7 +414,14 @@ export default function WithdrawPage() {
               </div>
               <div className="mt-2 flex justify-between text-sm text-muted">
                 <span>
-                  Available: <strong>${availableBalance.toFixed(2)}</strong>
+                  Available: <strong>${availableBalance.toFixed(2)}</strong>{" "}
+                  <button
+                    type="button"
+                    onClick={() => setAmount(availableBalance.toString())}
+                    className="text-brand-green underline font-semibold ml-1 hover:text-brand-green-dark"
+                  >
+                    Max
+                  </button>
                 </span>
                 <span>{`1 USD ≈ ${rate.toLocaleString()} MWK`}</span>
               </div>
@@ -453,23 +461,38 @@ export default function WithdrawPage() {
 
               {error && <p className="mt-6 text-sm text-red-500">{error}</p>}
 
-              <button
-                type="button"
-                onClick={handleWithdraw}
-                disabled={
-                  !amount ||
-                  !phone ||
-                  !email ||
-                  exceedsUsdBalance ||
-                  isAmountTooSmall ||
-                  isPhoneInvalid ||
-                  submitting ||
-                  !selectedProviderId
-                }
-                className="mt-8 h-[52px] w-full rounded-xl bg-brand-green text-sm font-bold text-white disabled:bg-border disabled:text-muted transition"
-              >
-                {submitting ? "Processing payout…" : "Confirm withdrawal"}
-              </button>
+              {!isMalawi ? (
+                <div className="mt-8 text-center">
+                  <p className="mb-2 text-xs font-semibold text-red-500">
+                    Withdrawals are currently limited to Malawi users (+265).
+                  </p>
+                  <button
+                    type="button"
+                    disabled
+                    className="h-[52px] w-full rounded-xl bg-border text-sm font-bold text-muted transition"
+                  >
+                    Unavailable
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleWithdraw}
+                  disabled={
+                    !amount ||
+                    !phone ||
+                    !email ||
+                    exceedsUsdBalance ||
+                    isAmountTooSmall ||
+                    isPhoneInvalid ||
+                    submitting ||
+                    !selectedProviderId
+                  }
+                  className="mt-8 h-[52px] w-full rounded-xl bg-brand-green text-sm font-bold text-white disabled:bg-border disabled:text-muted transition"
+                >
+                  {submitting ? "Processing payout…" : "Confirm withdrawal"}
+                </button>
+              )}
             </>
           )}
         </div>

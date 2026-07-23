@@ -10,6 +10,7 @@ const config: Config = {
           "green-dark": "#005C27",
           "green-light": "#E8F5EE",
           red: "#C8102E",
+          yellow: "#F59E0B",
           black: "#0A0A0A",
         },
         surface: "#FFFFFF",

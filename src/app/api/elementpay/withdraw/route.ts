@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         email: userKyc.email,
         phone: userKyc.phoneNumber || phone,
         dob: dob,
-        address: userKyc.city,
+        address: "Lilongwe", // Hardcoded for Malawi test
         country: "MW",
         id_type: userKyc.idType,
         id_number: userKyc.idNumber
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       crypto_amount: netAmount,
       country: "MW",
       currency: "MWK",
-      refund_address: "0x4821ced48Fb4456055c86E42587f61c1F39c6315",
+      refund_address: "0x4821ced48Fb4456055c86E42587f61c1F39c6315", // to be replaced by our treasury
     };
 
     // 1. Create Quote

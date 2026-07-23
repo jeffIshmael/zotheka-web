@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getTransactions, type Transaction } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 type HistoryKind = "purchase" | "withdrawal" | "deposit";
 
@@ -17,24 +18,24 @@ type DisplayItem = {
 };
 
 function mapTransaction(txn: Transaction): DisplayItem {
-  const isPurchase = txn.type === "CASH_IN";
-  const isDeposit = txn.type === "USD_IN";
+  const isPurchase = txn.type === "CASH_IN" || txn.type === "PURCHASE";
+  const isDeposit = txn.type === "USD_IN" || txn.type === "DEPOSIT";
   const status =
-    txn.status === "success" ? "completed" : txn.status === "pending" ? "pending" : "failed";
+    txn.status === "success" || txn.status === "completed" ? "completed" : txn.status === "pending" ? "pending" : "failed";
 
-  const amountValue = Number(txn.amount);
+  const amountValue = Number(txn.amount || 0);
   const formattedAmount = isDeposit
-    ? `+$${amountValue.toFixed(2)}`
+    ? `+$${(txn.usdAmount || amountValue).toFixed(2)}`
     : `MK ${Math.round(amountValue).toLocaleString()}`;
 
   return {
     id: String(txn.id),
     kind: isDeposit ? "deposit" : isPurchase ? "purchase" : "withdrawal",
-    title: isDeposit ? "USD deposit" : isPurchase ? "Netflix gift card" : "MWK withdrawal",
-    subtitle: txn.charge_id,
+    title: isDeposit ? "USD deposit" : isPurchase ? (txn.productName ? `${txn.productName} gift card` : "Gift card purchase") : "MWK withdrawal",
+    subtitle: txn.chargeId || txn.charge_id || "",
     amount: formattedAmount,
     secondaryAmount: isPurchase ? undefined : isDeposit ? txn.email : txn.phone,
-    date: new Date(txn.created_at).toLocaleDateString("en-GB", {
+    date: new Date(txn.createdAt || txn.created_at || new Date()).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -50,15 +51,17 @@ const STATUS_COLOR = {
 } as const;
 
 export default function HistoryPage() {
+  const { email } = useAuth();
   const [items, setItems] = useState<DisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!email) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await getTransactions();
+      const data = await getTransactions(email);
       setItems(data.transactions.map(mapTransaction));
     } catch {
       setError("Could not load history.");
@@ -66,7 +69,7 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [email]);
 
   useEffect(() => {
     void refresh();

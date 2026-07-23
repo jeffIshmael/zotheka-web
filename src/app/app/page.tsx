@@ -2,42 +2,27 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { BackendRequestError, buyGiftCard, getMonitor, makeChargeId } from "@/lib/api";
+import { useCallback, useState } from "react";
+import { BackendRequestError, buyGiftCard, makeChargeId, saveTransaction } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { resolveUsdToMwkRate, usdToMwk } from "@/lib/config";
-import { GIFT_CARDS } from "@/data/gift-cards";
-import { savePurchase } from "@/lib/storage";
+import { usdToMwk } from "@/lib/config";
+import { GIFT_CARDS, GiftCard } from "@/data/gift-cards";
 import { BuyGiftCardModal } from "@/components/app/BuyGiftCardModal";
+import { useAppData } from "@/lib/app-data";
 
 export default function HomePage() {
-  const netflix = GIFT_CARDS[0];
   const { email } = useAuth();
-  const [rate, setRate] = useState(1700);
-  const [buyOpen, setBuyOpen] = useState(false);
+  const { rate, kycVerified, kycPhone, loading: dataLoading } = useAppData();
+  const [selectedProduct, setSelectedProduct] = useState<GiftCard | null>(null);
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState<{ code: string; amount: number } | null>(null);
-  const [kycVerified, setKycVerified] = useState<boolean | null>(null);
-
-  const unitMwk = usdToMwk(netflix.usdAmount, rate);
-
-  useEffect(() => {
-    getMonitor()
-      .then((m) => setRate(resolveUsdToMwkRate(m.usd_to_mwk_rate)))
-      .catch(() => undefined);
-
-    if (email) {
-      fetch(`/api/kyc/status?email=${encodeURIComponent(email)}`)
-        .then((r) => r.json())
-        .then((d) => setKycVerified(d.verified))
-        .catch(() => undefined);
-    }
-  }, [email]);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
 
   const handleBuy = useCallback(
     async (payload: { quantity: number; phone: string }) => {
-      if (!email) return;
+      if (!email || !selectedProduct) return;
 
+      const unitMwk = usdToMwk(selectedProduct.usdAmount, rate);
       const totalMwk = unitMwk * payload.quantity;
       setPaying(true);
 
@@ -55,23 +40,19 @@ export default function HomePage() {
           return;
         }
 
-        const purchaseDate = new Date().toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        });
-
-        savePurchase({
-          id: result.charge_id,
-          usdAmount: netflix.usdAmount * payload.quantity,
-          mwk: totalMwk,
-          status: "delivered",
+        await saveTransaction({
+          email,
+          type: "PURCHASE",
+          amount: totalMwk,
+          usdAmount: selectedProduct.usdAmount * payload.quantity,
+          status: "completed",
           code: result.code,
-          date: purchaseDate,
-          productName: netflix.name,
+          productName: selectedProduct.name,
+          chargeId: result.charge_id,
+          phone: payload.phone,
         });
 
-        setBuyOpen(false);
+        setSelectedProduct(null);
         setSuccess({ code: result.code, amount: totalMwk });
       } catch (error) {
         const message =
@@ -83,104 +64,203 @@ export default function HomePage() {
         setPaying(false);
       }
     },
-    [email, netflix, unitMwk]
+    [email, selectedProduct, rate]
   );
+
+  const firstName = email ? email.split("@")[0] : "there";
+
 
   return (
     <div className="px-4 pt-4">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-muted">Hello 👋</p>
-          <h1 className="text-2xl font-extrabold">Pay globally</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          {kycVerified === false && (
-            <Link href="/app/kyc" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-green/10 border border-brand-green/20 text-brand-green text-xs font-bold hover:bg-brand-green/20 transition">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              Verify Profile
-            </Link>
-          )}
-          <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-sm font-bold text-brand-black shadow-inner uppercase">
-            {email ? email.charAt(0) : "U"}
+      {/* Header */}
+      <header className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-green text-sm font-extrabold text-white overflow-hidden">
+            <Image src="/images/icon.png" alt="Zotheka" width={36} height={36} className="h-full w-full object-cover" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Zotheka</p>
+            <p className="text-sm font-bold text-brand-black leading-tight">
+              Hello, {firstName} 👋
+            </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (kycVerified === false) setVerifyModalOpen(true);
+          }}
+          className="relative flex items-center transition hover:opacity-80"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-green text-sm font-bold uppercase text-white border border-border">
+            {email ? email.charAt(0) : "U"}
+          </div>
+          {kycVerified === false && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-yellow text-[9px] font-black text-white ring-2 ring-background">
+              !
+            </span>
+          )}
+        </button>
+      </header>
+
+      {/* Promo strip */}
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-green/10 text-brand-green">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 12h18M12 3c2.5 2.7 4 6.1 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6.1-4-9s1.5-6.3 4-9z"
+            />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-extrabold text-brand-black">Pay globally, in MWK</p>
+        </div>
       </div>
 
-      <div className="relative mb-6 overflow-hidden rounded-2xl bg-brand-green-light p-6">
-        <div className="absolute bottom-0 left-0 top-0 w-1 bg-brand-red" />
-        <p className="text-[11px] font-bold tracking-widest text-brand-green-dark">ZOTHEKA</p>
-        <h2 className="mt-1 text-lg font-bold">Global payments without a foreign card</h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          Pay in MWK.
-        </p>
-      </div>
-
+      {/* Gift cards */}
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-lg font-bold">Gift cards</h2>
+        <h2 className="text-lg font-bold text-brand-black">Gift cards</h2>
         <span className="text-sm text-muted">Prices in MWK</span>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setBuyOpen(true)}
-        className="w-full overflow-hidden rounded-2xl bg-surface text-left shadow-card transition hover:opacity-95"
-      >
-        <div className="relative flex h-[152px] items-stretch bg-black">
-          <div className="z-10 flex flex-col justify-between p-4">
-            <p className="text-lg font-extrabold text-white">Netflix Gift Card</p>
-            <p className="text-3xl font-extrabold text-netflix">${netflix.usdAmount} USD</p>
-            <p className="text-xs font-semibold text-netflix">Redeem at netflix.com/redeem</p>
-          </div>
-          <div className="absolute right-0 top-0 h-full w-[62%] overflow-hidden">
-            <Image
-              src="/images/netflix-black.jpg"
-              alt="Netflix"
-              width={280}
-              height={380}
-              className="absolute -right-16 top-1/2 h-[380px] w-[280px] -translate-y-1/2 object-contain"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-between border-t border-border p-4">
-          <div>
-            <p className="text-xs text-muted">You pay</p>
-            <p className="text-2xl font-extrabold">MK {unitMwk.toLocaleString()}</p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-netflix px-4 py-2.5 text-sm font-bold text-white">
-            Buy →
-          </span>
-        </div>
-      </button>
+      <div className="grid grid-cols-2 gap-3">
+        {dataLoading ? (
+          <>
+            <div className="h-[140px] animate-pulse rounded-2xl bg-surface shadow-card border border-border" />
+            <div className="h-[140px] animate-pulse rounded-2xl bg-surface shadow-card border border-border" />
+            <div className="h-[140px] animate-pulse rounded-2xl bg-surface shadow-card border border-border" />
+            <div className="h-[140px] animate-pulse rounded-2xl bg-surface shadow-card border border-border" />
+          </>
+        ) : (
+          GIFT_CARDS.map((card) => {
+            const unitMwk = usdToMwk(card.usdAmount, rate);
+            return (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => {
+                  if (kycVerified === false) {
+                    setVerifyModalOpen(true);
+                    return;
+                  }
+                  setSelectedProduct(card);
+                }}
+                className="flex flex-col justify-between overflow-hidden rounded-2xl bg-surface p-3 shadow-card transition hover:border-brand-green border border-border text-left"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[13px] font-extrabold text-brand-black truncate pr-1">{card.name}</p>
+                    {card.badge && (
+                      <span className="rounded bg-brand-green/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-brand-green shrink-0">
+                        {card.badge}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xl font-extrabold" style={{ color: card.accent }}>
+                    ${card.usdAmount}
+                  </p>
+                  <p className="text-[10px] font-semibold text-muted mt-0.5 line-clamp-2 leading-tight">
+                    {card.subtitle}
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-2 w-full">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-bold text-muted uppercase">You pay</span>
+                    <span className="text-xs font-extrabold text-brand-black">{unitMwk.toLocaleString()} MWK</span>
+                  </div>
+                  <span
+                    className="rounded-full px-2.5 py-1 text-[10px] font-bold text-white shrink-0"
+                    style={{ backgroundColor: card.accent }}
+                  >
+                    Buy →
+                  </span>
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
 
-      <BuyGiftCardModal
-        visible={buyOpen}
-        product={netflix}
-        rate={rate}
-        onClose={() => !paying && setBuyOpen(false)}
-        onBuy={handleBuy}
-        paying={paying}
-      />
+      {selectedProduct && (
+        <BuyGiftCardModal
+          visible={!!selectedProduct}
+          product={selectedProduct}
+          rate={rate}
+          kycVerified={kycVerified}
+          kycPhone={kycPhone}
+          onClose={() => !paying && setSelectedProduct(null)}
+          onBuy={handleBuy}
+          paying={paying}
+        />
+      )}
 
       {success && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
-          <div className="w-full max-w-[430px] rounded-2xl bg-surface p-8 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-green-light text-2xl text-brand-green">
-              ✓
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl bg-surface p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-green/10 text-brand-green">
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-            <h3 className="mt-4 text-xl font-extrabold">Payment confirmed</h3>
-            <p className="mt-2 text-sm text-muted">
-              MK {success.amount.toLocaleString()} paid. Your Netflix code:
+            <h3 className="mb-2 text-2xl font-extrabold text-brand-black">Success!</h3>
+            <p className="mb-6 text-sm font-medium text-muted">
+              You paid {success.amount.toLocaleString()} MWK and got your gift card code.
             </p>
-            <p className="mt-3 text-lg font-extrabold tracking-wide text-brand-green-dark">
-              {success.code}
-            </p>
+            <div className="mb-6 rounded-xl bg-background p-4 border border-border">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">Your Code</p>
+              <p className="text-xl font-mono font-bold tracking-widest text-brand-black">{success.code}</p>
+            </div>
             <button
               type="button"
               onClick={() => setSuccess(null)}
-              className="mt-6 rounded-xl bg-brand-green px-8 py-3 text-sm font-bold text-white"
+              className="w-full rounded-full bg-brand-black px-4 py-3 text-sm font-bold text-white transition hover:opacity-90"
             >
-              OK
+              Done
             </button>
+          </div>
+        </div>
+      )}
+
+      {verifyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl bg-surface p-6 shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setVerifyModalOpen(false)}
+              className="absolute right-4 top-4 text-muted hover:text-brand-black"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-yellow/10 text-brand-yellow">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-brand-black mb-2">Verify Account</h3>
+            <p className="text-sm text-muted mb-6">
+              You need to verify your identity to unlock features like adding USD and withdrawing funds.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/app/kyc"
+                className="w-full rounded-full bg-brand-yellow px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-brand-yellow/90"
+              >
+                Verify Now
+              </Link>
+              <button
+                type="button"
+                onClick={() => setVerifyModalOpen(false)}
+                className="w-full rounded-full px-4 py-3 text-sm font-bold text-muted transition hover:bg-background"
+              >
+                Later
+              </button>
+            </div>
           </div>
         </div>
       )}

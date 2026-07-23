@@ -13,15 +13,40 @@ type Props = {
   onSuccess: () => void;
 };
 
-const MIN_MWK = 2000;
-
 export function AddUsdModal({ visible, email, phone, network, walletAddress, rate, onClose, onSuccess }: Props) {
   const [mwkAmount, setMwkAmount] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [minAmount, setMinAmount] = useState<number>(2000); // Default fallback
 
   const [orderId, setOrderId] = useState<string | null>(null);
   const [pollStatus, setPollStatus] = useState<"pending" | "success" | "failed" | null>(null);
+
+  const isMalawi = phone?.startsWith("+265");
+
+  useEffect(() => {
+    if (visible && network) {
+      // Fetch catalog info to get the dynamic min_amount for the user's network
+      fetch("/api/elementpay/info?order_type=OnRamp")
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.providers && Array.isArray(data.providers)) {
+            // Find the provider that matches the user's network (using old UUIDs or new labels)
+            const provider = data.providers.find((p: any) => 
+              p.id === network || 
+              (network === "airtel" && p.name?.toLowerCase().includes("airtel")) ||
+              (network === "tnm" && p.name?.toLowerCase().includes("tnm"))
+            );
+            
+            if (provider && provider.min_amount) {
+              setMinAmount(Number(provider.min_amount));
+            }
+          }
+        })
+        .catch(err => console.error("Failed to fetch provider min amount", err));
+    }
+  }, [visible, network]);
+
 
   useEffect(() => {
     if (!visible) {
@@ -74,7 +99,7 @@ export function AddUsdModal({ visible, email, phone, network, walletAddress, rat
   }, [pollStatus, orderId, onSuccess]);
 
   const handleGetQuote = async () => {
-    if (!mwkAmount || mwkAmount < MIN_MWK) return;
+    if (!mwkAmount || mwkAmount < minAmount) return;
     if (!phone) {
       setError("No phone number registered with KYC");
       return;
@@ -168,37 +193,52 @@ export function AddUsdModal({ visible, email, phone, network, walletAddress, rat
             />
           </div>
           
-          {typeof mwkAmount === "number" && mwkAmount < MIN_MWK && (
-            <p className="text-xs text-red-500 font-semibold mb-4 -mt-2">Minimum amount is {MIN_MWK.toLocaleString()} MWK</p>
+          {typeof mwkAmount === "number" && mwkAmount < minAmount && (
+            <p className="text-xs text-red-500 font-semibold mb-4 -mt-2">Minimum amount is {minAmount.toLocaleString()} MWK</p>
           )}
 
           {error && <p className="mb-4 text-sm text-red-500 font-semibold">{error}</p>}
-
-          <button
-            type="button"
-            disabled={loading || !mwkAmount || mwkAmount < MIN_MWK || pollStatus === "pending" || pollStatus === "success"}
-            onClick={handleGetQuote}
-            className={`mt-2 h-[52px] w-full rounded-xl text-base font-bold transition-all ${
-              (!loading && mwkAmount && mwkAmount >= MIN_MWK && !pollStatus)
-                ? "bg-brand-green text-white hover:bg-brand-green-dark"
-                : pollStatus === "success"
-                ? "bg-brand-green text-white"
-                : "bg-border text-brand-black/40"
-            }`}
-          >
-            {pollStatus === "success" ? (
-              "Payment Successful! ✓"
-            ) : pollStatus === "pending" ? (
-              <span className="flex items-center justify-center gap-2 animate-pulse">
-                <span className="h-4 w-4 rounded-full border-2 border-brand-black/40 border-t-brand-black animate-spin" />
-                Prompt sent, waiting for approval...
-              </span>
-            ) : loading ? (
-              "Processing via ElementPay..."
-            ) : (
-              `Buy ~ $${((Number(mwkAmount) || 0) / rate).toFixed(2)}`
-            )}
-          </button>
+          
+          {!isMalawi ? (
+            <div className="mt-4 text-center">
+              <p className="mb-2 text-xs font-semibold text-red-500">
+                Depositing USD is currently limited to Malawi users (+265).
+              </p>
+              <button
+                type="button"
+                disabled
+                className="h-[52px] w-full rounded-xl bg-border text-base font-bold text-muted"
+              >
+                Unavailable
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={loading || !mwkAmount || mwkAmount < minAmount || pollStatus === "pending" || pollStatus === "success"}
+              onClick={handleGetQuote}
+              className={`mt-2 h-[52px] w-full rounded-xl text-base font-bold transition-all ${
+                (!loading && mwkAmount && mwkAmount >= minAmount && !pollStatus)
+                  ? "bg-brand-green text-white hover:bg-brand-green-dark"
+                  : pollStatus === "success"
+                  ? "bg-brand-green text-white"
+                  : "bg-border text-brand-black/40"
+              }`}
+            >
+              {pollStatus === "success" ? (
+                "Payment Successful! ✓"
+              ) : pollStatus === "pending" ? (
+                <span className="flex items-center justify-center gap-2 animate-pulse">
+                  <span className="h-4 w-4 rounded-full border-2 border-brand-black/40 border-t-brand-black animate-spin" />
+                  Prompt sent, waiting for approval...
+                </span>
+              ) : loading ? (
+                "Processing ..."
+              ) : (
+                `Buy ~ $${((Number(mwkAmount) || 0) / rate).toFixed(2)}`
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
