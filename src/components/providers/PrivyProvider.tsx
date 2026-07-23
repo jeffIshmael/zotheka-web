@@ -1,6 +1,7 @@
 "use client";
 
 import { PrivyProvider as BasePrivyProvider } from "@privy-io/react-auth";
+import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { ReactNode } from "react";
 import { base } from "viem/chains";
 import { PRIVY_APP_ID, PRIVY_CLIENT_ID } from "@/lib/privy-config";
@@ -23,7 +24,9 @@ export function PrivyProvider({ children }: { children: ReactNode }) {
         },
       }}
     >
-      {children}
+      <SmartWalletsProvider>
+        {children}
+      </SmartWalletsProvider>
     </BasePrivyProvider>
   );
 }
