@@ -72,6 +72,8 @@ export function SendUsdcModal({ visible, walletAddress, balance, onClose, onSucc
         data,
         value: "0x0",
         chainId: 8453
+      }, {
+        sponsor: true
       });
 
       if (txReceipt && txReceipt.hash) {
