@@ -27,7 +27,8 @@ export default function WithdrawPage() {
   const { email } = useAuth();
   const { user } = usePrivy();
   const { client } = useSmartWallets();
-  const walletAddress = client?.account?.address || user?.wallet?.address;
+  const smartWallet = user?.linkedAccounts?.find((account: any) => account.type === 'smart_wallet');
+  const walletAddress = (smartWallet as any)?.address || client?.account?.address || user?.wallet?.address;
   const { kycPhone, kycVerified, kycNetwork } = useAppData();
 
   const [loading, setLoading] = useState(true);

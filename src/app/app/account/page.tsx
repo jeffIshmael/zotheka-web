@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { usePrivy } from "@privy-io/react-auth";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { getUsdcBalance } from "@/lib/base";
 import { AddUsdModal } from "@/components/app/AddUsdModal";
 import { SendUsdcModal } from "@/components/app/SendUsdcModal";
@@ -22,7 +23,10 @@ export default function AccountPage() {
   const router = useRouter();
   const { email, signOut } = useAuth();
   const { user } = usePrivy();
-  const walletAddress = user?.wallet?.address;
+  const { client } = useSmartWallets();
+  
+  const smartWallet = user?.linkedAccounts?.find((account: any) => account.type === 'smart_wallet');
+  const walletAddress = (smartWallet as any)?.address || user?.wallet?.address;
   const { kycVerified, kycPhone, kycNetwork, rate, loading: dataLoading, refresh: refreshData } = useAppData();
   
   const [usdBalance, setUsdBalance] = useState(0);
