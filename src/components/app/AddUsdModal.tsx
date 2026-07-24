@@ -145,19 +145,27 @@ export function AddUsdModal({ visible, email, phone, network, walletAddress, rat
     }
   };
 
+  const isPending = pollStatus === "pending";
+
+  const handleClose = () => {
+    if (isPending) return;
+    onClose();
+  };
+
   if (!visible) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45">
-      <button type="button" className="absolute inset-0" aria-label="Close" onClick={onClose} />
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Close" onClick={handleClose} />
       <div className="relative w-full max-w-[430px] overflow-hidden rounded-t-3xl bg-surface sm:rounded-3xl">
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-border" />
         <div className="flex items-center justify-between px-6 py-4">
           <h2 className="text-xl font-extrabold">Buy USD with MWK</h2>
           <button
             type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-muted"
+            onClick={handleClose}
+            disabled={isPending}
+            className={`flex h-9 w-9 items-center justify-center rounded-full bg-background text-muted ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             ✕
           </button>
@@ -238,6 +246,12 @@ export function AddUsdModal({ visible, email, phone, network, walletAddress, rat
                 `Buy ~ $${((Number(mwkAmount) || 0) / rate).toFixed(2)}`
               )}
             </button>
+          )}
+
+          {isPending && (
+            <p className="mt-4 text-center text-sm font-semibold text-brand-green animate-pulse">
+              Please do not close this window while we wait for approval...
+            </p>
           )}
         </div>
       </div>
