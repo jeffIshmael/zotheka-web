@@ -12,7 +12,7 @@ import { useAppData } from "@/lib/app-data";
 
 export default function HomePage() {
   const { email } = useAuth();
-  const { rate, kycVerified, kycPhone, loading: dataLoading } = useAppData();
+  const { rate, kycVerified, kycFirstName, kycPhone, loading: dataLoading } = useAppData();
   const [selectedProduct, setSelectedProduct] = useState<GiftCard | null>(null);
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState<{ code: string; amount: number } | null>(null);
@@ -32,7 +32,7 @@ export default function HomePage() {
           amount: totalMwk,
           charge_id: makeChargeId("buy"),
           email,
-          name: email.split("@")[0] || "Zotheka User",
+          name: kycFirstName || email.split("@")[0] || "Zotheka User",
         });
 
         if (result.status !== "success") {
@@ -64,11 +64,10 @@ export default function HomePage() {
         setPaying(false);
       }
     },
-    [email, selectedProduct, rate]
+    [email, selectedProduct, rate, kycFirstName]
   );
 
-  const firstName = email ? email.split("@")[0] : "there";
-
+  const displayName = kycFirstName || (email ? email.split("@")[0] : "there");
 
   return (
     <div className="px-4 pt-4">
@@ -81,7 +80,7 @@ export default function HomePage() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Zotheka</p>
             <p className="text-sm font-bold text-brand-black leading-tight">
-              Hello, {firstName} 👋
+              Hello, {displayName} 👋
             </p>
           </div>
         </div>

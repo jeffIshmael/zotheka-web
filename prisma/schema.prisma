@@ -11,18 +11,18 @@ datasource db {
 model UserKyc {
   id             String   @id @default(cuid())
   email          String   @unique
-  firstName      String
-  lastName       String
+  firstName      String?
+  lastName       String?
   phoneNumber    String?
   network        String?
-  dateOfBirth    String   // e.g. "1990-01-01"
-  streetAddress  String
-  city           String
-  state          String
-  postalCode     String
-  country        String
-  idType         String   // e.g. "passport", "drivers_license"
-  idNumber       String
+  dateOfBirth    String?   // e.g. "1990-01-01"
+  streetAddress  String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?
+  idType         String?   // e.g. "passport", "drivers_license"
+  idNumber       String?
   idImageFront   String?  // base64 string or url
   idImageBack    String?  // base64 string or url
   selfieImage    String?  // base64 string or url

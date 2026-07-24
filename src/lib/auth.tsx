@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { createContext, ReactNode, useContext, useMemo } from "react";
+import { createContext, ReactNode, useContext, useMemo, useEffect } from "react";
 import { getUserEmail } from "@/lib/user-email";
 
 type AuthContextValue = {
@@ -15,6 +15,25 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, ready, authenticated, logout } = usePrivy();
+
+  useEffect(() => {
+    if (ready && authenticated && user) {
+      const email = getUserEmail(user);
+      const smartWallet = user.linkedAccounts.find(
+        (account) => account.type === "smart_wallet"
+      );
+      // @ts-ignore
+      const walletAddress = smartWallet ? smartWallet.address : user.wallet?.address;
+      
+      if (email) {
+        fetch("/api/user/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, walletAddress })
+        }).catch(err => console.error("Failed to sync user", err));
+      }
+    }
+  }, [ready, authenticated, user]);
 
   const value = useMemo(
     () => ({

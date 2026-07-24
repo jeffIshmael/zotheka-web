@@ -14,9 +14,11 @@ export async function GET(req: NextRequest) {
       where: { email },
     });
     return NextResponse.json({ 
-      verified: !!kyc,
+      verified: !!kyc?.firstName,
+      firstName: kyc?.firstName || null,
       phone: kyc?.phoneNumber || null,
       network: kyc?.network || null,
+      // @ts-ignore
       walletAddress: kyc?.smartWalletAddress || null
     });
   } catch (err) {
