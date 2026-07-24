@@ -117,6 +117,19 @@ export async function POST(req: Request) {
     const orderPayload = acceptData.data || {};
     orderPayload.order_id = orderPayload.order_id || orderPayload.id || quoteId;
 
+    // Save pending transaction to DB
+    await prisma.transaction.create({
+      data: {
+        email: userKyc.email,
+        type: "DEPOSIT",
+        amount: Number(amount),
+        status: "pending",
+        chargeId: orderPayload.order_id,
+        phone: userKyc.phoneNumber || phone,
+        network: networkId,
+      },
+    });
+
     return NextResponse.json({ success: true, order: orderPayload, rate: rate });
   } catch (error: any) {
     console.error("ElementPay Exception", error);

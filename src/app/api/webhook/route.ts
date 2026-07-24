@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { prisma } from "@/lib/prisma";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 
@@ -62,11 +63,21 @@ export async function POST(req: Request) {
       console.log(
         `✅ [ElementPay Webhook] Order ${payload.order_id} SETTLED — Fiat: ${payload.amount_fiat} ${payload.currency}, Crypto: ${payload.amount_crypto} USDC, TxHash: ${payload.settlement_transaction_hash || "N/A"}`
       );
-      // Future logic: update user balance or notify user in DB
+      await prisma.transaction.updateMany({
+        where: { chargeId: payload.order_id },
+        data: {
+          status: "completed",
+          usdAmount: payload.amount_crypto ? Number(payload.amount_crypto) : null,
+        },
+      });
     } else if (event === "order.failed") {
       console.log(
         `❌ [ElementPay Webhook] Order ${payload.order_id} FAILED — Reason: ${payload.reason || payload.failure_reason || "UNKNOWN"}`
       );
+      await prisma.transaction.updateMany({
+        where: { chargeId: payload.order_id },
+        data: { status: "failed" },
+      });
     } else if (event === "order.processing") {
       console.log(
         `⏳ [ElementPay Webhook] Order ${payload.order_id} PROCESSING on payment rail.`
