@@ -67,7 +67,7 @@ export default function ManualServicePage() {
 
   const selectedPkg = SPOTIFY_PACKAGES.find((p) => p.id === selectedPkgId)!;
   const baseUsd = selectedPkg.priceKsh / KSH_TO_USD_RATE;
-  const serviceFeeUsd = Math.ceil(baseUsd / CONCIERGE_FEE_INTERVAL) * CONCIERGE_FEE_USD;
+  const serviceFeeUsd = Math.max(1, Math.floor(baseUsd / CONCIERGE_FEE_INTERVAL)) * CONCIERGE_FEE_USD;
   const totalUsd = baseUsd + serviceFeeUsd;
   const totalMwk = totalUsd * rate;
 
