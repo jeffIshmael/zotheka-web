@@ -5,51 +5,88 @@ const API_KEY = process.env.ELEMENTPAY_LIVE_API_KEY;
 
 export const dynamic = "force-dynamic";
 
+function getMinimumAmount(countryData: any) {
+  let minAmount = 5000;
+  try {
+    const momoProviders = countryData?.payment_methods?.mobile_money?.providers || [];
+    const bankProviders = countryData?.payment_methods?.bank?.providers || [];
+    const allProviders = [...momoProviders, ...bankProviders];
+    
+    if (allProviders.length > 0) {
+      // Find the absolute minimum across all providers
+      minAmount = Math.min(...allProviders.map(p => p.min_amount).filter(val => typeof val === 'number'));
+    }
+  } catch (e) {
+    // default to 5000 on error
+  }
+  return minAmount === Infinity ? 5000 : minAmount;
+}
+
 export async function GET() {
   if (!API_KEY) {
     return NextResponse.json({ error: "ElementPay API key not configured" }, { status: 500 });
   }
 
   try {
-    const [ratesRes, onRampCatRes, offRampCatRes] = await Promise.all([
-      fetch(`${ELEMENTPAY_API}/partner/rates/indicative?fiat=MWK`, {
-        headers: { "X-API-Key": API_KEY },
-        cache: "no-store"
-      }),
-      fetch(`${ELEMENTPAY_API}/partner/catalog?country=MW&order_type=OnRamp`, {
-        headers: { "X-API-Key": API_KEY },
-        cache: "no-store"
-      }),
-      fetch(`${ELEMENTPAY_API}/partner/catalog?country=MW&order_type=OffRamp`, {
-        headers: { "X-API-Key": API_KEY },
-        cache: "no-store"
-      })
-    ]);
+    // 1. Fetch full catalog
+    const catalogRes = await fetch(`${ELEMENTPAY_API}/partner/catalog`, {
+      headers: { "X-API-Key": API_KEY },
+      cache: "no-store"
+    });
+    const catalogData = await catalogRes.json();
 
-    const ratesData = await ratesRes.json();
-    const onRampCatData = await onRampCatRes.json();
-    const offRampCatData = await offRampCatRes.json();
+    const onRampCountries = catalogData?.data?.onramp?.countries || {};
+    const offRampCountries = catalogData?.data?.offramp?.countries || {};
 
-    const rateInfo = ratesData?.data?.rates?.[0] || {};
+    // 2. Extract all unique currencies
+    const uniqueCurrencies = new Set<string>();
+    Object.values(onRampCountries).forEach((c: any) => c.currency && uniqueCurrencies.add(c.currency));
+    Object.values(offRampCountries).forEach((c: any) => c.currency && uniqueCurrencies.add(c.currency));
     
-    // Safely extract minimum amounts from catalog providers, fallback to 5000 if not found
-    const onRampProviders = onRampCatData?.data?.onramp?.countries?.MW?.payment_methods?.mobile_money?.providers || [];
-    const onRampMin = onRampProviders.length > 0 ? onRampProviders[0].min_amount : 5000;
+    const currenciesStr = Array.from(uniqueCurrencies).join(",");
 
-    const offRampProviders = offRampCatData?.data?.offramp?.countries?.MW?.payment_methods?.mobile_money?.providers || [];
-    const offRampMin = offRampProviders.length > 0 ? offRampProviders[0].min_amount : 5000;
+    // 3. Fetch rates for all currencies
+    let ratesMap: Record<string, any> = {};
+    if (currenciesStr) {
+      const ratesRes = await fetch(`${ELEMENTPAY_API}/partner/rates/indicative?fiat=${currenciesStr}`, {
+        headers: { "X-API-Key": API_KEY },
+        cache: "no-store"
+      });
+      const ratesData = await ratesRes.json();
+      const ratesArray = ratesData?.data?.rates || [];
+      ratesArray.forEach((rateInfo: any) => {
+        ratesMap[rateInfo.code] = rateInfo;
+      });
+    }
+
+    // 4. Build response array
+    const buildResponse = (countriesDict: Record<string, any>, isOnRamp: boolean) => {
+      return Object.values(countriesDict).filter((c: any) => c.enabled).map((c: any) => {
+        const rateInfo = ratesMap[c.currency] || {};
+        const minAmount = getMinimumAmount(c);
+        
+        let rateStr = "N/A";
+        if (isOnRamp && rateInfo.buy) {
+          rateStr = `1 USD = ${rateInfo.buy} ${c.currency}`;
+        } else if (!isOnRamp && rateInfo.sell) {
+          rateStr = `1 USD = ${rateInfo.sell} ${c.currency}`;
+        }
+
+        return {
+          country: c.country_name,
+          countryCode: c.country_code,
+          currency: c.currency,
+          rate: rateStr,
+          minimumAmount: minAmount,
+          updatedAt: rateInfo.updatedAt || new Date().toISOString()
+        };
+      });
+    };
 
     return NextResponse.json({
-      onRamp: {
-        rate: `1 USD = ${rateInfo.buy || 4650} MWK`,
-        minimumAmount: onRampMin,
-        updatedAt: rateInfo.updatedAt || new Date().toISOString()
-      },
-      offRamp: {
-        rate: `1 USD = ${rateInfo.sell || 3850} MWK`,
-        minimumAmount: offRampMin,
-        updatedAt: rateInfo.updatedAt || new Date().toISOString()
-      }
+      success: true,
+      onRamp: buildResponse(onRampCountries, true),
+      offRamp: buildResponse(offRampCountries, false)
     });
   } catch (error) {
     console.error("Rates fetch error", error);
