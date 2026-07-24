@@ -34,7 +34,17 @@ export default function AccountPage() {
     }
   }, [user, smartWallet]);
 
-  const { kycVerified, kycPhone, kycNetwork, rate, loading: dataLoading, refresh: refreshData } = useAppData();
+  const { kycVerified, kycPhone, kycNetwork, kycWalletAddress, rate, loading: dataLoading, refresh: refreshData } = useAppData();
+
+  useEffect(() => {
+    if (email && walletAddress && kycWalletAddress !== walletAddress) {
+      fetch("/api/user/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, walletAddress }),
+      }).then(() => refreshData()).catch(console.error);
+    }
+  }, [email, walletAddress, kycWalletAddress, refreshData]);
   
   const [usdBalance, setUsdBalance] = useState(0);
   const [balanceLoading, setBalanceLoading] = useState(true);

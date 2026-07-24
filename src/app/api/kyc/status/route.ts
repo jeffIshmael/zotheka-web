@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ 
       verified: !!kyc,
       phone: kyc?.phoneNumber || null,
-      network: kyc?.network || null
+      network: kyc?.network || null,
+      walletAddress: kyc?.smartWalletAddress || null
     });
   } catch (err) {
     console.error("KYC status error", err);

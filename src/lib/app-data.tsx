@@ -9,6 +9,7 @@ type AppDataContextValue = {
   kycVerified: boolean | null;
   kycPhone: string | null;
   kycNetwork: string | null;
+  kycWalletAddress: string | null;
   rate: number;
   loading: boolean;
   refresh: () => Promise<void>;
@@ -22,6 +23,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [kycVerified, setKycVerified] = useState<boolean | null>(null);
   const [kycPhone, setKycPhone] = useState<string | null>(null);
   const [kycNetwork, setKycNetwork] = useState<string | null>(null);
+  const [kycWalletAddress, setKycWalletAddress] = useState<string | null>(null);
   const [rate, setRate] = useState<number>(1700);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +39,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         getMonitor().catch(() => null),
         fetch(`/api/kyc/status?email=${encodeURIComponent(email)}`)
           .then(r => r.json())
-          .catch(() => ({ verified: false, phone: null, network: null })),
+          .catch(() => ({ verified: false, phone: null, network: null, walletAddress: null })),
         fetch(`/api/elementpay/info`)
           .then(r => r.json())
           .catch(() => null)
@@ -52,6 +54,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setKycVerified(kycRes.verified);
       setKycPhone(kycRes.phone || null);
       setKycNetwork(kycRes.network || null);
+      setKycWalletAddress(kycRes.walletAddress || null);
     } catch (err) {
       console.error("Failed to load app data", err);
     } finally {
@@ -64,7 +67,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   return (
-    <AppDataContext.Provider value={{ kycVerified, kycPhone, kycNetwork, rate, loading, refresh }}>
+    <AppDataContext.Provider value={{ kycVerified, kycPhone, kycNetwork, kycWalletAddress, rate, loading, refresh }}>
       {children}
     </AppDataContext.Provider>
   );
