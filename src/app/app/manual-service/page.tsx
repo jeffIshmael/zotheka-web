@@ -11,10 +11,10 @@ const CONCIERGE_FEE_USD = 1;
 const CONCIERGE_FEE_INTERVAL = 5;
 
 const SPOTIFY_PACKAGES = [
-  { id: "individual", name: "Individual", priceKsh: 450, desc: "1 Premium account" },
-  { id: "student", name: "Student", priceKsh: 250, desc: "1 verified Premium account" },
+  { id: "individual", name: "Individual", priceKsh: 470, desc: "1 Premium account" },
+  { id: "student", name: "Student", priceKsh: 260, desc: "1 verified Premium account" },
   { id: "duo", name: "Duo", priceKsh: 600, desc: "2 Premium accounts" },
-  { id: "family", name: "Family", priceKsh: 700, desc: "Up to 6 Premium accounts" },
+  { id: "family", name: "Family", priceKsh: 720, desc: "Up to 6 Premium accounts" },
 ];
 
 export default function ManualServicePage() {
