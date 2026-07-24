@@ -11,22 +11,45 @@ export async function GET() {
   }
 
   try {
-    const [mwkRes, kesRes] = await Promise.all([
+    const [ratesRes, onRampCatRes, offRampCatRes] = await Promise.all([
       fetch(`${ELEMENTPAY_API}/partner/rates/indicative?fiat=MWK`, {
-        headers: { "X-API-Key": API_KEY }
+        headers: { "X-API-Key": API_KEY },
+        cache: "no-store"
       }),
-      fetch(`${ELEMENTPAY_API}/partner/rates/indicative?fiat=KES`, {
-        headers: { "X-API-Key": API_KEY }
+      fetch(`${ELEMENTPAY_API}/partner/catalog?country=MW&order_type=OnRamp`, {
+        headers: { "X-API-Key": API_KEY },
+        cache: "no-store"
+      }),
+      fetch(`${ELEMENTPAY_API}/partner/catalog?country=MW&order_type=OffRamp`, {
+        headers: { "X-API-Key": API_KEY },
+        cache: "no-store"
       })
     ]);
 
-    const mwkData = await mwkRes.json();
-    const kesData = await kesRes.json();
+    const ratesData = await ratesRes.json();
+    const onRampCatData = await onRampCatRes.json();
+    const offRampCatData = await offRampCatRes.json();
+
+    const rateInfo = ratesData?.data?.rates?.[0] || {};
+    
+    // Safely extract minimum amounts from catalog providers, fallback to 5000 if not found
+    const onRampProviders = onRampCatData?.data?.onramp?.countries?.MW?.payment_methods?.mobile_money?.providers || [];
+    const onRampMin = onRampProviders.length > 0 ? onRampProviders[0].min_amount : 5000;
+
+    const offRampProviders = offRampCatData?.data?.offramp?.countries?.MW?.payment_methods?.mobile_money?.providers || [];
+    const offRampMin = offRampProviders.length > 0 ? offRampProviders[0].min_amount : 5000;
 
     return NextResponse.json({
-      success: true,
-      malawi: mwkData?.data?.rates || [],
-      kenya: kesData?.data?.rates || []
+      onRamp: {
+        rate: `1 USD = ${rateInfo.buy || 4650} MWK`,
+        minimumAmount: onRampMin,
+        updatedAt: rateInfo.updatedAt || new Date().toISOString()
+      },
+      offRamp: {
+        rate: `1 USD = ${rateInfo.sell || 3850} MWK`,
+        minimumAmount: offRampMin,
+        updatedAt: rateInfo.updatedAt || new Date().toISOString()
+      }
     });
   } catch (error) {
     console.error("Rates fetch error", error);
