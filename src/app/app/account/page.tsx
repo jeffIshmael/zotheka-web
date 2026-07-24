@@ -122,7 +122,6 @@ export default function AccountPage() {
         ) : (
           <>
             <p className="mt-3 text-5xl font-extrabold tracking-tight">$ {usdBalance.toFixed(2)}</p>
-            <p className="mt-1 text-xl font-semibold text-white/90">= {Math.round(mwkBalance).toLocaleString()} MKW</p>
           </>
         )}
 
