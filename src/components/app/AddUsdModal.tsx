@@ -17,7 +17,7 @@ export function AddUsdModal({ visible, email, phone, network, walletAddress, rat
   const [mwkAmount, setMwkAmount] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [minAmount, setMinAmount] = useState<number>(2000); // Default fallback
+  const [minAmount, setMinAmount] = useState<number>(5000); // Default fallback
 
   const [orderId, setOrderId] = useState<string | null>(null);
   const [pollStatus, setPollStatus] = useState<"pending" | "success" | "failed" | null>(null);
@@ -40,6 +40,9 @@ export function AddUsdModal({ visible, email, phone, network, walletAddress, rat
             
             if (provider && provider.min_amount) {
               setMinAmount(Number(provider.min_amount));
+            } else if (data.providers.length > 0) {
+              // If no exact match, use the first provider's min_amount as fallback
+              setMinAmount(Number(data.providers[0].min_amount));
             }
           }
         })
