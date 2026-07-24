@@ -142,24 +142,30 @@ export default function HomePage() {
                 key={card.id}
                 type="button"
                 onClick={() => {
+                  if (card.isOutOfStock) return;
                   if (kycVerified === false) {
                     setVerifyModalOpen(true);
                     return;
                   }
                   setSelectedProduct(card);
                 }}
-                className="flex flex-col justify-between overflow-hidden rounded-2xl bg-surface p-3 shadow-card transition hover:border-brand-green border border-border text-left"
+                className={`flex flex-col justify-between overflow-hidden rounded-2xl bg-surface p-3 shadow-card transition text-left border border-border ${card.isOutOfStock ? "opacity-60 cursor-not-allowed" : "hover:border-brand-green"}`}
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <p className="text-[13px] font-extrabold text-brand-black truncate pr-1">{card.name}</p>
-                    {card.badge && (
+                    {card.badge && !card.isOutOfStock && (
                       <span className="rounded bg-brand-green/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-brand-green shrink-0">
                         {card.badge}
                       </span>
                     )}
+                    {card.isOutOfStock && (
+                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-gray-500 shrink-0">
+                        Out of Stock
+                      </span>
+                    )}
                   </div>
-                  <p className="mt-1.5 text-xl font-extrabold" style={{ color: card.accent }}>
+                  <p className="mt-1.5 text-xl font-extrabold" style={{ color: card.isOutOfStock ? "#9ca3af" : card.accent }}>
                     ${card.usdAmount}
                   </p>
                   <p className="text-[10px] font-semibold text-muted mt-0.5 line-clamp-2 leading-tight">
@@ -169,13 +175,13 @@ export default function HomePage() {
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-2 w-full">
                   <div className="flex flex-col">
                     <span className="text-[9px] font-bold text-muted uppercase">You pay</span>
-                    <span className="text-xs font-extrabold text-brand-black">{unitMwk.toLocaleString()} MWK</span>
+                    <span className={`text-xs font-extrabold ${card.isOutOfStock ? "text-gray-400" : "text-brand-black"}`}>{unitMwk.toLocaleString()} MWK</span>
                   </div>
                   <span
                     className="rounded-full px-2.5 py-1 text-[10px] font-bold text-white shrink-0"
-                    style={{ backgroundColor: card.accent }}
+                    style={{ backgroundColor: card.isOutOfStock ? "#9ca3af" : card.accent }}
                   >
-                    Buy →
+                    {card.isOutOfStock ? "Unavailable" : "Buy →"}
                   </span>
                 </div>
               </button>

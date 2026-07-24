@@ -6,6 +6,7 @@ export type GiftCard = {
   accent: string;
   badge?: string;
   logoUrl?: string;
+  isOutOfStock?: boolean;
 };
 
 export const GIFT_CARDS: GiftCard[] = [
@@ -24,6 +25,14 @@ export const GIFT_CARDS: GiftCard[] = [
     subtitle: "USD gift card · redeem at spotify.com/redeem",
     usdAmount: 10,
     accent: "#1DB954",
+    isOutOfStock: true,
+  },
+  {
+    id: "google-play-us",
+    name: "Google Play",
+    subtitle: "USD gift card · redeem at play.google.com/redeem",
+    usdAmount: 10,
+    accent: "#3bccff",
   },
   {
     id: "playstation-us",

@@ -13,6 +13,7 @@ type AppDataContextValue = {
   kycWalletAddress: string | null;
   rate: number;
   loading: boolean;
+  pendingPurchasesCount: number;
   refresh: () => Promise<void>;
 };
 
@@ -26,6 +27,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [kycPhone, setKycPhone] = useState<string | null>(null);
   const [kycNetwork, setKycNetwork] = useState<string | null>(null);
   const [kycWalletAddress, setKycWalletAddress] = useState<string | null>(null);
+  const [pendingPurchasesCount, setPendingPurchasesCount] = useState<number>(0);
   const [rate, setRate] = useState<number>(1700);
   const [loading, setLoading] = useState(true);
 
@@ -58,6 +60,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setKycPhone(kycRes.phone || null);
       setKycNetwork(kycRes.network || null);
       setKycWalletAddress(kycRes.walletAddress || null);
+      setPendingPurchasesCount(kycRes.pendingPurchasesCount || 0);
     } catch (err) {
       console.error("Failed to load app data", err);
     } finally {
@@ -70,7 +73,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   return (
-    <AppDataContext.Provider value={{ kycVerified, kycFirstName, kycPhone, kycNetwork, kycWalletAddress, rate, loading, refresh }}>
+    <AppDataContext.Provider value={{ kycVerified, kycFirstName, kycPhone, kycNetwork, kycWalletAddress, rate, loading, pendingPurchasesCount, refresh }}>
       {children}
     </AppDataContext.Provider>
   );

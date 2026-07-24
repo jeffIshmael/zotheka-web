@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getTransactions, type Transaction } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -58,9 +59,18 @@ export default function PurchasesPage() {
             return (
               <li key={order.id} className="rounded-2xl bg-surface p-4 shadow-card">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-bold">{order.productName || "Gift"} card</p>
-                    <p className="text-sm text-muted">${order.usdAmount} USD · {dateStr}</p>
+                  <div className="flex items-center gap-3">
+                    {order.network === "concierge" && (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black">
+                        <Image src="/images/spotify.jpg" alt="Spotify" width={40} height={40} className="object-cover" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-bold">
+                        {order.network === "concierge" ? order.productName : `${order.productName || "Gift"} card`}
+                      </p>
+                      <p className="text-sm text-muted">${order.usdAmount} USD · {dateStr}</p>
+                    </div>
                   </div>
                   <span className="rounded-full bg-brand-green-light px-2.5 py-1 text-xs font-bold text-brand-green-dark">
                     {order.status}

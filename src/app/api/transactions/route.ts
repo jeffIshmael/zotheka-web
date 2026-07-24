@@ -21,7 +21,39 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ transactions });
+    let allOrders: any[] = [...transactions];
+
+    // If fetching purchases or all, include manual service orders
+    if (!type || type === "PURCHASE") {
+      // @ts-ignore - Prisma type issue until restart
+      const manualOrders = await (prisma as any).manualServiceOrder.findMany({
+        where: { userEmail: email },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Map manual orders to transaction shape
+      const mappedManual = manualOrders.map((m: any) => ({
+        id: m.id,
+        email: m.userEmail,
+        type: "PURCHASE",
+        amount: m.amountPaidMwk,
+        usdAmount: m.usdAmount,
+        status: m.status,
+        productName: `Spotify - ${m.package}`,
+        code: m.status === "approved" ? "MANUAL_UPGRADE_COMPLETE" : "PENDING_CONCIERGE",
+        chargeId: m.txHash,
+        network: "concierge",
+        phone: null,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+      }));
+
+      allOrders = [...allOrders, ...mappedManual].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+
+    return NextResponse.json({ transactions: allOrders });
   } catch (error) {
     console.error("GET /api/transactions error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

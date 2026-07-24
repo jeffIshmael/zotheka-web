@@ -11,6 +11,7 @@ import { AppDataProvider, useAppData } from "@/lib/app-data";
 
 const NAV_ITEMS = [
   { href: "/app", label: "Home", icon: HomeIcon },
+  { href: "/app/manual-service", label: "Manually", icon: GavelIcon },
   { href: "/app/purchases", label: "My purchases", icon: BagIcon },
   { href: "/app/history", label: "History", icon: ClockIcon },
   { href: "/app/account", label: "Account", icon: UserIcon },
@@ -20,7 +21,7 @@ function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const { kycVerified } = useAppData();
+  const { kycVerified, pendingPurchasesCount } = useAppData();
 
   const isSignIn = pathname === "/app/sign-in";
   const isKyc = pathname === "/app/kyc";
@@ -68,11 +69,15 @@ function AppShell({ children }: { children: ReactNode }) {
                   <Link
                     key={href}
                     href={href}
-                    className={`flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-semibold transition ${
+                    className={`relative flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-semibold transition ${
                       active ? "text-brand-green" : "text-muted"
                     }`}
                   >
-                    <Icon active={active} showBadge={href === "/app/account" && kycVerified === false} />
+                    <Icon 
+                      active={active} 
+                      showBadge={href === "/app/account" && kycVerified === false} 
+                      badgeCount={href === "/app/purchases" ? pendingPurchasesCount : undefined}
+                    />
                     {label}
                   </Link>
                 );
@@ -105,12 +110,19 @@ function HomeIcon({ active }: { active: boolean; showBadge?: boolean }) {
   );
 }
 
-function BagIcon({ active }: { active: boolean; showBadge?: boolean }) {
+function BagIcon({ active, badgeCount }: { active: boolean; showBadge?: boolean; badgeCount?: number }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-      <path d="M6 7h12l-1 14H7L6 7z" />
-      <path d="M9 7V5a3 3 0 0 1 6 0v2" />
-    </svg>
+    <div className="relative">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+        <path d="M6 7h12l-1 14H7L6 7z" />
+        <path d="M9 7V5a3 3 0 0 1 6 0v2" />
+      </svg>
+      {!!badgeCount && badgeCount > 0 && (
+        <span className="absolute -top-1 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-brand-green text-[10px] font-bold text-white shadow-sm border border-surface">
+          {badgeCount}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -143,6 +155,18 @@ function PlusIcon({ active }: { active: boolean; showBadge?: boolean }) {
       <circle cx="12" cy="12" r="10" />
       <path d="M8 12h8" />
       <path d="M12 8v8" />
+    </svg>
+  );
+}
+
+function GavelIcon({ active }: { active: boolean; showBadge?: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+      <path d="m14 13-7.5 7.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L11 10" />
+      <path d="m16 16 6-6" />
+      <path d="m8 8 6-6" />
+      <path d="m9 7 8 8" />
+      <path d="m21 11-8-8" />
     </svg>
   );
 }

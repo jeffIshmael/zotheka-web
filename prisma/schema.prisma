@@ -31,6 +31,8 @@ model UserKyc {
   smartWalletAddress String? // stores the user's generated smart wallet address
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  manualServiceOrders ManualServiceOrder[]
 }
 
 model Transaction {
@@ -45,6 +47,24 @@ model Transaction {
   chargeId        String?
   network         String?
   phone           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ManualServiceOrder {
+  id              String   @id @default(cuid())
+  userEmail       String
+  user            UserKyc  @relation(fields: [userEmail], references: [email])
+  targetEmail     String
+  targetPassword  String
+  service         String   // e.g., "Spotify"
+  package         String   // e.g., "Individual"
+  amountPaidMwk   Float
+  usdAmount       Float
+  orderId         String?  @unique
+  paymentStatus   String   @default("pending") // "pending", "paid", "failed"
+  txHash          String?
+  status          String   @default("pending") // "pending", "approved", "failed"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

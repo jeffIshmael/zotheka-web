@@ -13,13 +13,22 @@ export async function GET(req: NextRequest) {
     const kyc = await prisma.userKyc.findUnique({
       where: { email },
     });
+
+    const pendingManualOrders = await (prisma as any).manualServiceOrder.count({
+      where: { 
+        userEmail: email,
+        status: "pending" 
+      }
+    });
+
     return NextResponse.json({ 
       verified: !!kyc?.firstName,
       firstName: kyc?.firstName || null,
       phone: kyc?.phoneNumber || null,
       network: kyc?.network || null,
       // @ts-ignore
-      walletAddress: kyc?.smartWalletAddress || null
+      walletAddress: kyc?.smartWalletAddress || null,
+      pendingPurchasesCount: pendingManualOrders
     });
   } catch (err) {
     console.error("KYC status error", err);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { appendToSheet } from "@/lib/google-sheets";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 
@@ -60,24 +61,63 @@ export async function POST(req: Request) {
     console.log("==========================================");
 
     if (event === "order.settled") {
-      console.log(
-        `✅ [ElementPay Webhook] Order ${payload.order_id} SETTLED — Fiat: ${payload.amount_fiat} ${payload.currency}, Crypto: ${payload.amount_crypto} USDC, TxHash: ${payload.settlement_transaction_hash || "N/A"}`
-      );
-      await prisma.transaction.updateMany({
-        where: { chargeId: payload.order_id },
-        data: {
-          status: "completed",
-          usdAmount: payload.amount_crypto ? Number(payload.amount_crypto) : null,
-        },
+      const manualOrder = await (prisma as any).manualServiceOrder.findUnique({
+        where: { orderId: payload.order_id }
       });
+
+      if (manualOrder) {
+        console.log(`✅ [ElementPay Webhook] ManualServiceOrder ${payload.order_id} SETTLED`);
+        
+        await (prisma as any).manualServiceOrder.update({
+          where: { orderId: payload.order_id },
+          data: { 
+            paymentStatus: "paid",
+            txHash: payload.settlement_transaction_hash
+          }
+        });
+
+        // Trigger sheet append ONLY after payment is settled
+        appendToSheet({
+          userEmail: manualOrder.userEmail,
+          targetEmail: manualOrder.targetEmail,
+          service: manualOrder.service,
+          package: manualOrder.package,
+          amountMwk: manualOrder.amountPaidMwk,
+          txHash: payload.settlement_transaction_hash || payload.order_id,
+        }).catch(console.error);
+
+      } else {
+        console.log(
+          `✅ [ElementPay Webhook] Order ${payload.order_id} SETTLED — Fiat: ${payload.amount_fiat} ${payload.currency}, Crypto: ${payload.amount_crypto} USDC, TxHash: ${payload.settlement_transaction_hash || "N/A"}`
+        );
+        await prisma.transaction.updateMany({
+          where: { chargeId: payload.order_id },
+          data: {
+            status: "completed",
+            usdAmount: payload.amount_crypto ? Number(payload.amount_crypto) : null,
+          },
+        });
+      }
     } else if (event === "order.failed") {
-      console.log(
-        `❌ [ElementPay Webhook] Order ${payload.order_id} FAILED — Reason: ${payload.reason || payload.failure_reason || "UNKNOWN"}`
-      );
-      await prisma.transaction.updateMany({
-        where: { chargeId: payload.order_id },
-        data: { status: "failed" },
+      const manualOrder = await (prisma as any).manualServiceOrder.findUnique({
+        where: { orderId: payload.order_id }
       });
+
+      if (manualOrder) {
+        console.log(`❌ [ElementPay Webhook] ManualServiceOrder ${payload.order_id} FAILED`);
+        await (prisma as any).manualServiceOrder.update({
+          where: { orderId: payload.order_id },
+          data: { paymentStatus: "failed" }
+        });
+      } else {
+        console.log(
+          `❌ [ElementPay Webhook] Order ${payload.order_id} FAILED — Reason: ${payload.reason || payload.failure_reason || "UNKNOWN"}`
+        );
+        await prisma.transaction.updateMany({
+          where: { chargeId: payload.order_id },
+          data: { status: "failed" },
+        });
+      }
     } else if (event === "order.processing") {
       console.log(
         `⏳ [ElementPay Webhook] Order ${payload.order_id} PROCESSING on payment rail.`
