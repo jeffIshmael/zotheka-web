@@ -27,6 +27,13 @@ export default function AccountPage() {
   
   const smartWallet = user?.linkedAccounts?.find((account: any) => account.type === 'smart_wallet');
   const walletAddress = (smartWallet as any)?.address || user?.wallet?.address;
+
+  useEffect(() => {
+    if (user && !smartWallet) {
+      console.error("Smart wallet address not found in user.linkedAccounts!", user.linkedAccounts);
+    }
+  }, [user, smartWallet]);
+
   const { kycVerified, kycPhone, kycNetwork, rate, loading: dataLoading, refresh: refreshData } = useAppData();
   
   const [usdBalance, setUsdBalance] = useState(0);

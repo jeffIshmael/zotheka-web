@@ -31,6 +31,12 @@ export default function WithdrawPage() {
   const walletAddress = (smartWallet as any)?.address || client?.account?.address || user?.wallet?.address;
   const { kycPhone, kycVerified, kycNetwork } = useAppData();
 
+  useEffect(() => {
+    if (user && !smartWallet) {
+      console.error("Smart wallet address not found in user.linkedAccounts on Withdraw Page!", user.linkedAccounts);
+    }
+  }, [user, smartWallet]);
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
