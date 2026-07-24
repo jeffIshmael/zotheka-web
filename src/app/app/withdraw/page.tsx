@@ -196,6 +196,7 @@ export default function WithdrawPage() {
           phone: fullPhone,
           providerId: selectedProviderId,
           email,
+          walletAddress,
         }),
       });
 
@@ -213,23 +214,38 @@ export default function WithdrawPage() {
         throw new Error("Missing deposit address from payment gateway");
       }
 
-      // Execute on-chain transfer to the deposit address
-      const amountUnits = BigInt(Math.floor(amountNum * 1_000_000));
-      const cleanAddress = depositAddress.startsWith("0x") ? depositAddress.slice(2) : depositAddress;
-      const paddedAddress = cleanAddress.padStart(64, "0");
-      const hexAmount = amountUnits.toString(16).padStart(64, "0");
-      const txData = `0xa9059cbb${paddedAddress}${hexAmount}`;
+      // Execute on-chain transfer to the deposit address AND the treasury
+      const elementPayAmountUnits = BigInt(Math.floor(netAmount * 1_000_000));
+      const treasuryAmountUnits = BigInt(Math.floor(platformFee * 1_000_000));
+      
+      const cleanDepositAddress = depositAddress.startsWith("0x") ? depositAddress.slice(2) : depositAddress;
+      const paddedDepositAddress = cleanDepositAddress.padStart(64, "0");
+      const hexElementPayAmount = elementPayAmountUnits.toString(16).padStart(64, "0");
+      const elementPayTxData = `0xa9059cbb${paddedDepositAddress}${hexElementPayAmount}`;
+
+      const treasuryAddress = "0x4821ced48Fb4456055c86E42587f61c1F39c6315";
+      const cleanTreasuryAddress = treasuryAddress.slice(2);
+      const paddedTreasuryAddress = cleanTreasuryAddress.padStart(64, "0");
+      const hexTreasuryAmount = treasuryAmountUnits.toString(16).padStart(64, "0");
+      const treasuryTxData = `0xa9059cbb${paddedTreasuryAddress}${hexTreasuryAmount}`;
 
       if (!client) {
          throw new Error("Smart Wallet client not ready. Please try again.");
       }
 
       await client.sendTransaction({
-        calls: [{
-          to: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base
-          data: txData as `0x${string}`,
-          value: BigInt(0)
-        }]
+        calls: [
+          {
+            to: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base
+            data: elementPayTxData as `0x${string}`,
+            value: BigInt(0)
+          },
+          {
+            to: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base
+            data: treasuryTxData as `0x${string}`,
+            value: BigInt(0)
+          }
+        ]
       });
 
       setOrderData({

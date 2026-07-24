@@ -11,9 +11,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { amount, phone, providerId, email } = body;
+    const { amount, phone, providerId, email, walletAddress } = body;
 
-    if (!amount || !phone || !providerId || !email) {
+    if (!amount || !phone || !providerId || !email || !walletAddress) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       crypto_amount: netAmount,
       country: "MW",
       currency: "MWK",
-      refund_address: "0x4821ced48Fb4456055c86E42587f61c1F39c6315", // to be replaced by our treasury
+      refund_address: walletAddress,
     };
 
     // 1. Create Quote
